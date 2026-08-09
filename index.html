@@ -18,6 +18,7 @@
     --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
     --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
     --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB; --sky:#2C5F82; --sky-bg:#E3EDF3;
+    --locked:#8A9086; --locked-bg:#EDEBE4;
     --shadow:0 1px 2px rgba(21,26,22,.06), 0 4px 14px rgba(21,26,22,.05);
     --f-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --f-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
@@ -27,6 +28,7 @@
       --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
       --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
       --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114; --sky:#84B8D8; --sky-bg:#16242C;
+      --locked:#6E756B; --locked-bg:#20231F;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
     }
   }
@@ -34,11 +36,13 @@
     --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
     --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
     --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114; --sky:#84B8D8; --sky-bg:#16242C;
+    --locked:#6E756B; --locked-bg:#20231F;
   }
   :root[data-theme="light"] {
     --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
     --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
     --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB; --sky:#2C5F82; --sky-bg:#E3EDF3;
+    --locked:#8A9086; --locked-bg:#EDEBE4;
   }
 
   * { box-sizing: border-box; }
@@ -52,37 +56,27 @@
   .wrap { max-width:620px; margin:0 auto; padding:22px 16px 64px; display:flex; flex-direction:column; gap:26px; }
 
   /* ---------- lock ---------- */
-  #lock { min-height:82vh; display:flex; flex-direction:column; justify-content:center; gap:22px; max-width:400px; margin:0 auto; padding:24px 20px; }
+  #lock { min-height:82vh; display:flex; flex-direction:column; justify-content:center; gap:20px; max-width:400px; margin:0 auto; padding:24px 20px; }
   .lock__mark { width:46px; height:46px; }
   #lock h1 { margin:0; font-size:24px; font-weight:800; letter-spacing:-.02em; }
   #lock p { margin:0; color:var(--ink-2); font-size:15px; }
   .lock__form { display:flex; flex-direction:column; gap:11px; }
-  #pin { font-family:var(--f-mono); font-size:19px; letter-spacing:.06em; padding:14px 15px; border-radius:10px; border:2px solid var(--rule); background:var(--card); color:var(--ink); width:100%; min-height:52px; text-align:center; text-transform:uppercase; }
+  #pin { font-family:var(--f-mono); font-size:19px; letter-spacing:.06em; padding:14px 15px; border-radius:10px; border:2px solid var(--rule); background:var(--card); color:var(--ink); width:100%; min-height:52px; text-align:center; }
   #pin:focus { outline:none; border-color:var(--accent); }
-  #pin::placeholder { color:var(--ink-3); letter-spacing:.12em; text-transform:none; }
   .btn { font-family:var(--f-ui); font-size:16px; font-weight:650; padding:14px 18px; min-height:52px; border:none; border-radius:10px; background:var(--accent); color:#fff; cursor:pointer; width:100%; }
   .btn:disabled { opacity:.55; cursor:default; }
   .btn:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
   .lock__err { color:var(--critical); font-size:14.5px; min-height:20px; font-weight:550; }
   .lock__hint { font-size:13px; color:var(--ink-3); line-height:1.5; border-top:1px solid var(--rule); padding-top:14px; }
-
   #setupBox { border:1px solid var(--rule); border-radius:10px; background:var(--card); }
   #setupBox[open] { border-color:var(--accent); }
-  #setupBox summary {
-    cursor:pointer; list-style:none; padding:14px 15px; min-height:50px;
-    display:flex; align-items:center; font-size:15px; font-weight:650; color:var(--accent);
-  }
+  #setupBox summary { cursor:pointer; list-style:none; padding:14px 15px; min-height:50px; display:flex; align-items:center; font-size:15px; font-weight:650; color:var(--accent); }
   #setupBox summary::-webkit-details-marker { display:none; }
   #setupBox summary::after { content:"+"; margin-left:auto; font-size:20px; line-height:1; color:var(--ink-3); }
   #setupBox[open] summary::after { content:"–"; }
-  #setupBox summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
   .setup__body { padding:0 15px 15px; display:flex; flex-direction:column; gap:11px; }
   .setup__body p { margin:0; font-size:14px; color:var(--ink-2); line-height:1.5; }
-  #devkey {
-    font-family:var(--f-mono); font-size:14px; padding:13px 14px; border-radius:10px;
-    border:2px solid var(--rule); background:var(--paper); color:var(--ink);
-    width:100%; min-height:50px;
-  }
+  #devkey { font-family:var(--f-mono); font-size:14px; padding:13px 14px; border-radius:10px; border:2px solid var(--rule); background:var(--paper); color:var(--ink); width:100%; min-height:50px; }
   #devkey:focus { outline:none; border-color:var(--accent); }
 
   /* ---------- masthead ---------- */
@@ -93,21 +87,30 @@
   .mast h1 span { color:var(--accent); }
   .mast__date { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.07em; font-variant-numeric:tabular-nums; }
 
+  /* ---------- day progress ---------- */
+  .tally { display:flex; flex-direction:column; gap:8px; }
+  .tally__row { display:flex; justify-content:space-between; align-items:baseline; font-family:var(--f-mono); font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-2); }
+  .tally__row b { color:var(--ink); font-size:15px; font-weight:700; letter-spacing:0; font-variant-numeric:tabular-nums; }
+  .tally__track { height:7px; border-radius:4px; background:var(--rule); overflow:hidden; }
+  .tally__fill { height:100%; background:var(--accent); border-radius:4px; transition:width .3s ease; }
+
+  /* ---------- toolbar ---------- */
+  .tools { display:flex; gap:8px; flex-wrap:wrap; }
+  .tool {
+    flex:1 1 auto; min-width:0; min-height:46px; padding:10px 12px;
+    font-family:var(--f-ui); font-size:14px; font-weight:600;
+    border:1px solid var(--rule); border-radius:9px; background:var(--card); color:var(--ink-2);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; white-space:nowrap;
+  }
+  .tool[aria-pressed="true"] { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
+  .tool:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .tool b { font-variant-numeric:tabular-nums; }
+
   /* ---------- assessment + speak ---------- */
   .read { display:flex; flex-direction:column; gap:12px; }
-  .assessment {
-    font-size:18.5px; line-height:1.5; font-weight:500; text-wrap:pretty;
-    padding-left:14px; border-left:3px solid var(--accent);
-  }
-  .speak {
-    display:flex; align-items:center; justify-content:center; gap:10px;
-    font-family:var(--f-ui); font-size:16px; font-weight:650;
-    min-height:54px; width:100%; padding:14px 18px;
-    border:1.5px solid var(--accent); border-radius:11px;
-    background:var(--accent-bg); color:var(--accent); cursor:pointer;
-  }
+  .assessment { font-size:18.5px; line-height:1.5; font-weight:500; text-wrap:pretty; padding-left:14px; border-left:3px solid var(--accent); }
+  .speak { display:flex; align-items:center; justify-content:center; gap:10px; font-family:var(--f-ui); font-size:16px; font-weight:650; min-height:54px; width:100%; padding:14px 18px; border:1.5px solid var(--accent); border-radius:11px; background:var(--accent-bg); color:var(--accent); cursor:pointer; }
   .speak[data-on="1"] { background:var(--accent); color:#fff; }
-  .speak:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
   .speak svg { width:19px; height:19px; flex:none; }
 
   /* ---------- weather ---------- */
@@ -116,20 +119,18 @@
   .wx__place { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--ink-2); }
   .wx__now { font-family:var(--f-mono); font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
   .wx__now b { color:var(--ink); font-size:16px; font-weight:700; }
-
   .wx__chart { display:flex; align-items:flex-end; gap:3px; height:56px; padding:0 15px; }
-  .wx__col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%; gap:3px; min-width:0; }
+  .wx__col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%; min-width:0; }
   .wx__bar { width:100%; border-radius:2px 2px 0 0; background:var(--sky); opacity:.32; min-height:2px; }
   .wx__col[data-wet="1"] .wx__bar { opacity:1; }
   .wx__col[data-wet="2"] .wx__bar { opacity:1; background:var(--critical); }
   .wx__hours { display:flex; gap:3px; padding:5px 15px 0; }
   .wx__hr { flex:1; text-align:center; font-family:var(--f-mono); font-size:9.5px; color:var(--ink-3); min-width:0; overflow:hidden; }
-
   .wx__verdict { display:flex; flex-direction:column; gap:5px; padding:11px 15px 13px; border-top:1px solid var(--rule); margin-top:9px; font-size:14.5px; }
   .wx__line { display:flex; gap:9px; align-items:flex-start; }
   .wx__dot { flex:none; width:9px; height:9px; border-radius:50%; margin-top:6px; background:var(--accent); }
   .wx__dot--warn { background:var(--flag); }
-  .wx__dot--bad  { background:var(--critical); }
+  .wx__dot--bad { background:var(--critical); }
   .wx__line b { font-weight:650; }
   .wx__line span { color:var(--ink-2); }
   .wx__stale { padding:9px 15px; font-size:12.5px; color:var(--flag); background:var(--flag-bg); border-top:1px solid var(--rule); }
@@ -146,37 +147,74 @@
   .risk__detail { font-weight:650; font-size:16px; }
   .risk__note { font-size:14px; color:var(--ink-2); }
 
-  /* ---------- sections / tickets ---------- */
+  /* ---------- sections ---------- */
   .sec { display:flex; flex-direction:column; gap:12px; }
   .sec__label { display:flex; align-items:center; gap:10px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--ink-2); }
   .sec__label::after { content:""; flex:1; height:1px; background:var(--rule); }
   .sec__count { font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--ink-3); letter-spacing:0; }
 
-  .ticket { display:flex; background:var(--card); border:1px solid var(--rule); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); }
-  .ticket__stripe { width:6px; flex:none; background:var(--accent); }
-  .ticket--critical .ticket__stripe { background:var(--critical); }
-  .ticket--flag .ticket__stripe { background:var(--flag); }
-  .ticket__body { flex:1; padding:13px 15px 14px; min-width:0; display:flex; flex-direction:column; gap:9px; }
-  .ticket__head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-  .ticket__head h3 { margin:0; font-size:17px; font-weight:750; letter-spacing:-.01em; }
-  .ticket__meta { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; }
+  /* ---------- quests ---------- */
+  .quest { display:flex; background:var(--card); border:1px solid var(--rule); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); }
+  .quest__stripe { width:6px; flex:none; background:var(--accent); }
+  .quest[data-tone="critical"] .quest__stripe { background:var(--critical); }
+  .quest[data-tone="flag"] .quest__stripe { background:var(--flag); }
+  .quest[data-done="1"] { opacity:.62; }
+  .quest[data-done="1"] .quest__stripe { background:var(--locked); }
+  .quest__body { flex:1; padding:13px 15px 14px; min-width:0; display:flex; flex-direction:column; gap:9px; }
+  .quest__head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .quest__giver { margin:0; font-size:17px; font-weight:750; letter-spacing:-.01em; }
+  .quest__meta { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; }
 
-  .stamp { font-family:var(--f-mono); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:3px 7px; border-radius:4px; white-space:nowrap; background:var(--accent-bg); color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 26%, transparent); }
-  .stamp--critical { background:var(--critical-bg); color:var(--critical); border-color:color-mix(in srgb, var(--critical) 30%, transparent); }
-  .stamp--flag { background:var(--flag-bg); color:var(--flag); border-color:color-mix(in srgb, var(--flag) 30%, transparent); }
+  .pill { font-family:var(--f-mono); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:3px 7px; border-radius:4px; white-space:nowrap; background:var(--accent-bg); color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 26%, transparent); }
+  .pill--critical { background:var(--critical-bg); color:var(--critical); border-color:color-mix(in srgb, var(--critical) 30%, transparent); }
+  .pill--flag { background:var(--flag-bg); color:var(--flag); border-color:color-mix(in srgb, var(--flag) 30%, transparent); }
+  .pill--done { background:var(--locked-bg); color:var(--ink-2); border-color:var(--rule); }
 
-  .jobs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
-  .jobs li { border-top:1px solid var(--rule); }
-  .jobs li:first-child { border-top:none; }
-  .job { display:flex; align-items:flex-start; gap:11px; padding:9px 2px; cursor:pointer; min-height:44px; }
-  .job input { appearance:none; -webkit-appearance:none; flex:none; width:22px; height:22px; margin:1px 0 0; border:2px solid var(--ink-3); border-radius:5px; background:transparent; cursor:pointer; position:relative; transition:background .12s ease, border-color .12s ease; }
-  .job input:checked { background:var(--accent); border-color:var(--accent); }
-  .job input:checked::after { content:""; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
-  .job input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  .job__text { flex:1; min-width:0; }
-  .job__title { display:block; font-weight:500; }
-  .job__note { display:block; font-size:14px; color:var(--ink-2); margin-top:2px; }
-  .job input:checked ~ .job__text .job__title { text-decoration:line-through; color:var(--ink-3); }
+  .quest__prog { display:flex; align-items:center; gap:9px; }
+  .quest__track { flex:1; height:5px; border-radius:3px; background:var(--rule); overflow:hidden; }
+  .quest__fill { height:100%; background:var(--accent); border-radius:3px; transition:width .25s ease; }
+  .quest__frac { font-family:var(--f-mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+
+  .objs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+  .objs li { border-top:1px solid var(--rule); }
+  .objs li:first-child { border-top:none; }
+  .obj { display:flex; align-items:flex-start; gap:11px; padding:9px 2px; cursor:pointer; min-height:44px; }
+  .obj input { appearance:none; -webkit-appearance:none; flex:none; width:22px; height:22px; margin:1px 0 0; border:2px solid var(--ink-3); border-radius:5px; background:transparent; cursor:pointer; position:relative; transition:background .12s ease, border-color .12s ease; }
+  .obj input:checked { background:var(--accent); border-color:var(--accent); }
+  .obj input:checked::after { content:""; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
+  .obj input:disabled { border-color:var(--rule); background:var(--locked-bg); cursor:not-allowed; }
+  .obj input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .obj__text { flex:1; min-width:0; }
+  .obj__title { display:block; font-weight:500; }
+  .obj__note { display:block; font-size:14px; color:var(--ink-2); margin-top:2px; }
+  .obj input:checked ~ .obj__text .obj__title { text-decoration:line-through; color:var(--ink-3); }
+  li[data-locked="1"] .obj { cursor:not-allowed; }
+  li[data-locked="1"] .obj__title { color:var(--ink-3); }
+  .obj__lock { font-family:var(--f-mono); font-size:10.5px; color:var(--locked); text-transform:uppercase; letter-spacing:.07em; display:block; margin-top:3px; }
+
+  /* ---------- edit mode ---------- */
+  .quest__edit { display:none; gap:6px; padding-top:4px; border-top:1px dashed var(--rule); margin-top:2px; }
+  body[data-edit="1"] .quest__edit { display:flex; }
+  .mini { min-width:42px; min-height:38px; padding:6px 10px; font-size:13px; font-weight:600; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink-2); cursor:pointer; }
+  .mini:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .mini--danger { color:var(--critical); }
+  body[data-edit="1"] .obj__title { border-bottom:1px dashed var(--ink-3); }
+  body[data-edit="1"] .obj__title[contenteditable="true"]:focus { outline:none; border-bottom:2px solid var(--accent); }
+  .editbar { display:flex; flex-direction:column; gap:9px; padding:13px 15px; border:1.5px dashed var(--accent); border-radius:11px; background:var(--accent-bg); }
+  .editbar p { margin:0; font-size:14px; color:var(--ink-2); line-height:1.5; }
+  .editbar input { font-family:var(--f-ui); font-size:15px; padding:11px 13px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); width:100%; min-height:46px; }
+  .editbar input:focus { outline:none; border-color:var(--accent); }
+  .editbar .row { display:flex; gap:8px; }
+  .editbar .row .btn { min-height:46px; font-size:15px; }
+
+  /* ---------- settings ---------- */
+  .settings { display:none; flex-direction:column; gap:13px; padding:15px; border:1px solid var(--rule); border-radius:11px; background:var(--card); box-shadow:var(--shadow); }
+  body[data-settings="1"] .settings { display:flex; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; color:var(--ink-2); }
+  .field select { font-family:var(--f-ui); font-size:15px; padding:11px 13px; border-radius:9px; border:1.5px solid var(--rule); background:var(--paper); color:var(--ink); min-height:46px; width:100%; }
+  .field select:focus { outline:none; border-color:var(--accent); }
+  .field p { margin:0; font-size:13px; color:var(--ink-3); line-height:1.5; }
 
   .q { background:var(--card); border:1px solid var(--rule); border-left:6px solid var(--flag); border-radius:10px; padding:13px 15px; display:flex; flex-direction:column; gap:5px; box-shadow:var(--shadow); }
   .q strong { font-size:16px; font-weight:700; }
@@ -213,30 +251,24 @@
     <h1>Evergreen Dispatch</h1>
     <p id="lockMsg">Enter your PIN.</p>
   </div>
-
   <form class="lock__form" id="lockForm">
     <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password"
            placeholder="••••" spellcheck="false" aria-label="PIN">
     <button class="btn" id="unlockBtn" type="submit">Unlock</button>
     <div class="lock__err" id="err" role="alert"></div>
   </form>
-
   <details id="setupBox">
-    <summary id="setupSummary">Set up this device</summary>
+    <summary>Set up this device</summary>
     <div class="setup__body">
-      <p>
-        Paste your setup link here — the whole thing, or just the long code from the
-        end of it. You only do this once per device.
-      </p>
+      <p>Paste your setup link here — the whole thing, or just the long code from the end of it. You only do this once per device.</p>
       <form class="lock__form" id="setupForm">
-        <input id="devkey" type="text" inputmode="text" autocomplete="off" spellcheck="false"
-               autocapitalize="off" autocorrect="off" placeholder="Paste setup link" aria-label="Setup link or code">
+        <input id="devkey" type="text" autocomplete="off" spellcheck="false" autocapitalize="off"
+               autocorrect="off" placeholder="Paste setup link" aria-label="Setup link or code">
         <button class="btn" id="setupBtn" type="submit">Set up</button>
         <div class="lock__err" id="setupErr" role="alert"></div>
       </form>
     </div>
   </details>
-
   <p class="lock__hint" id="lockHint">
     Your PIN alone can't open this board — it's only half the key. The other half
     is stored on this device and never leaves it.
@@ -251,63 +283,11 @@
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
-  var CHECK_KEY = "evergreen-checks";
+  var OVERLAY_KEY = "evergreen-overlay";
+  var PREFS_KEY = "evergreen-prefs";
   var WX_KEY = "evergreen-wx";
-  var LAT = 29.1872, LON = -82.1401;      // Ocala, FL
-  var REFRESH_MS = 60000;                 // re-check the board every minute
-
-  // Half the key lives on the device, never in the repo and never typed. It
-  // arrives via the setup link's URL fragment (#k=…), which browsers never send
-  // to the server. Without it the published ciphertext can't be attacked by
-  // guessing a 4-digit PIN.
-  //
-  // Storage is per-browser, so a link opened inside another app's in-app browser
-  // (OneDrive, Gmail, Messages) sets the key up in THAT browser and not Safari.
-  // Hence the paste-it-yourself fallback on the lock screen.
-
-  var memDeviceKey = null;   // used when localStorage is unavailable
-
-  // Accepts a whole setup link, the bare code, or the code typed in spaced or
-  // dashed groups — reading 32 characters off a screen is error-prone enough
-  // without forcing them to be contiguous.
-  function extractKey(text) {
-    var raw = String(text || "").trim();
-    var m = /([0-9a-f]{24,})/i.exec(raw);
-    if (m) return m[1].toLowerCase();
-    // Nothing contiguous — try again with separators removed. Only safe on
-    // input that isn't a URL, or "https" and friends would contribute letters.
-    if (!/[:/]/.test(raw)) {
-      var joined = raw.replace(/[\s-]+/g, "");
-      var m2 = /^([0-9a-f]{24,})$/i.exec(joined);
-      if (m2) return m2[1].toLowerCase();
-    }
-    return null;
-  }
-
-  function storeDeviceKey(key) {
-    memDeviceKey = key;
-    try {
-      localStorage.setItem(DEVKEY_KEY, key);
-      return localStorage.getItem(DEVKEY_KEY) === key;   // confirm it survived
-    } catch (e) { return false; }
-  }
-
-  function readDeviceKey() {
-    try { var v = localStorage.getItem(DEVKEY_KEY); if (v) return v; } catch (e) {}
-    return memDeviceKey;
-  }
-
-  function captureDeviceKey() {
-    var fromHash = extractKey(location.hash || "");
-    if (fromHash) {
-      var persisted = storeDeviceKey(fromHash);
-      // Only strip the fragment once we know it actually saved. If storage is
-      // blocked (Private Browsing), leaving it in the URL means a reload still
-      // works instead of silently locking him out of his own board.
-      if (persisted) history.replaceState(null, "", location.pathname + location.search);
-    }
-    return readDeviceKey();
-  }
+  var LAT = 29.1872, LON = -82.1401;
+  var REFRESH_MS = 60000;
 
   var lock = document.getElementById("lock");
   var app = document.getElementById("app");
@@ -316,17 +296,58 @@
   var err = document.getElementById("err");
   var btn = document.getElementById("unlockBtn");
 
-  var bundle = null, board = null, wx = null;
+  var bundle = null, board = null, deviceKey = null, currentPin = null;
+  var lastWeather = { analysed: null, ageMin: 0 };
+  var wxTicks = 0;
 
+  /* ============ small helpers ============ */
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
+  function slug(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
   function b64ToBytes(b64) {
     var bin = atob(b64), out = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
+  }
+  function load(key, fallback) {
+    try { var v = JSON.parse(localStorage.getItem(key) || "null"); return v == null ? fallback : v; }
+    catch (e) { return fallback; }
+  }
+  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+  /* ============ device key ============ */
+  var memDeviceKey = null;
+
+  function extractKey(text) {
+    var raw = String(text || "").trim();
+    var m = /([0-9a-f]{24,})/i.exec(raw);
+    if (m) return m[1].toLowerCase();
+    if (!/[:/]/.test(raw)) {
+      var joined = raw.replace(/[\s-]+/g, "");
+      var m2 = /^([0-9a-f]{24,})$/i.exec(joined);
+      if (m2) return m2[1].toLowerCase();
+    }
+    return null;
+  }
+  function storeDeviceKey(key) {
+    memDeviceKey = key;
+    try { localStorage.setItem(DEVKEY_KEY, key); return localStorage.getItem(DEVKEY_KEY) === key; }
+    catch (e) { return false; }
+  }
+  function readDeviceKey() {
+    try { var v = localStorage.getItem(DEVKEY_KEY); if (v) return v; } catch (e) {}
+    return memDeviceKey;
+  }
+  function captureDeviceKey() {
+    var fromHash = extractKey(location.hash || "");
+    if (fromHash) {
+      var persisted = storeDeviceKey(fromHash);
+      if (persisted) history.replaceState(null, "", location.pathname + location.search);
+    }
+    return readDeviceKey();
   }
 
   async function decrypt(passphrase, data) {
@@ -339,10 +360,19 @@
     return JSON.parse(new TextDecoder().decode(plain));
   }
 
-  /* ================= WEATHER ================= */
-  // Open-Meteo: no key, CORS-open, so this stays live even when the PC that
-  // builds the board is off. Cached so a dead-zone doesn't blank the panel.
+  /* ============ your edits (device-local overlay) ============
+     Layered on top of the published board so a rebuild never wipes them.
+     Nothing here reaches Pocket — the UI says so plainly.                */
+  function blankOverlay() { return { v: 1, done: {}, hidden: {}, titles: {}, order: {}, custom: [] }; }
+  var overlay = load(OVERLAY_KEY, null) || blankOverlay();
+  ["done", "hidden", "titles", "order"].forEach(function (k) { if (!overlay[k]) overlay[k] = {}; });
+  if (!Array.isArray(overlay.custom)) overlay.custom = [];
+  function saveOverlay() { save(OVERLAY_KEY, overlay); }
 
+  var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false };
+  function savePrefs() { save(PREFS_KEY, prefs); }
+
+  /* ============ weather ============ */
   async function loadWeather() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT + "&longitude=" + LON +
       "&hourly=precipitation_probability,apparent_temperature,temperature_2m" +
@@ -351,14 +381,11 @@
       var res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       var j = await res.json();
-      var payload = { at: Date.now(), data: j };
-      try { localStorage.setItem(WX_KEY, JSON.stringify(payload)); } catch (e) {}
+      save(WX_KEY, { at: Date.now(), data: j });
       return { data: j, ageMin: 0 };
     } catch (e) {
-      try {
-        var cached = JSON.parse(localStorage.getItem(WX_KEY) || "null");
-        if (cached) return { data: cached.data, ageMin: Math.round((Date.now() - cached.at) / 60000) };
-      } catch (e2) {}
+      var cached = load(WX_KEY, null);
+      if (cached) return { data: cached.data, ageMin: Math.round((Date.now() - cached.at) / 60000) };
       return null;
     }
   }
@@ -367,36 +394,26 @@
     var now = new Date();
     var idx = j.hourly.time.findIndex(function (t) { return new Date(t) >= now; });
     if (idx < 0) return null;
-
     var sunset = new Date(j.daily.sunset[0]);
     var hours = [];
     for (var i = idx; i < j.hourly.time.length && hours.length < 11; i++) {
       var when = new Date(j.hourly.time[i]);
       hours.push({
-        when: when,
-        label: j.hourly.time[i].slice(11, 13),
-        pop: j.hourly.precipitation_probability[i],
+        when: when, pop: j.hourly.precipitation_probability[i],
         feels: Math.round(j.hourly.apparent_temperature[i]),
-        temp: Math.round(j.hourly.temperature_2m[i]),
-        daylight: when <= sunset
+        temp: Math.round(j.hourly.temperature_2m[i]), daylight: when <= sunset
       });
     }
-
-    // Longest run of workable daylight hours (rain chance under 40%).
     var best = null, run = null;
     hours.forEach(function (h) {
       if (h.pop < 40 && h.daylight) {
-        if (!run) run = { start: h, end: h, len: 1 };
-        else { run.end = h; run.len++; }
+        if (!run) run = { start: h, end: h, len: 1 }; else { run.end = h; run.len++; }
         if (!best || run.len > best.len) best = { start: run.start, end: run.end, len: run.len };
-      } else { run = null; }
+      } else run = null;
     });
-
-    var wettest = hours.filter(function (h) { return h.daylight; })
-      .reduce(function (a, h) { return (!a || h.pop > a.pop) ? h : a; }, null);
-    var peakFeels = hours.filter(function (h) { return h.daylight; })
-      .reduce(function (a, h) { return (a == null || h.feels > a) ? h.feels : a; }, null);
-
+    var daylit = hours.filter(function (h) { return h.daylight; });
+    var wettest = daylit.reduce(function (a, h) { return (!a || h.pop > a.pop) ? h : a; }, null);
+    var peakFeels = daylit.reduce(function (a, h) { return (a == null || h.feels > a) ? h.feels : a; }, null);
     return { hours: hours, best: best, wettest: wettest, peakFeels: peakFeels, sunset: sunset, current: hours[0] };
   }
 
@@ -409,9 +426,6 @@
   function weatherLines(a) {
     var out = [];
     if (a.best && a.best.len >= 2) {
-      // The last dry hour runs to the top of the next hour — but never past
-      // sunset. Promising daylight that isn't there sends him out to a yard
-      // he can't finish.
       var endHr = new Date(Math.min(a.best.end.when.getTime() + 3600000, a.sunset.getTime()));
       out.push({ tone: "ok", head: "Mow window", body: hhmm(a.best.start.when) + " to " + hhmm(endHr) + " — rain under 40%, and that's when the light goes." });
     } else {
@@ -420,12 +434,9 @@
     if (a.wettest && a.wettest.pop >= 40) {
       out.push({ tone: a.wettest.pop >= 60 ? "bad" : "warn", head: "Rain builds", body: a.wettest.pop + "% around " + hhmm(a.wettest.when) + ". Get the mowing in before it." });
     }
-    // NOAA puts 103°F+ in "Danger", but that assumes you're sitting still.
-    // Pushing a mower in full sun, the exertion cases start well below that.
     if (a.peakFeels != null && a.peakFeels >= 100) {
       out.push({
-        tone: a.peakFeels >= 108 ? "bad" : "warn",
-        head: "Heat index " + a.peakFeels + "°F",
+        tone: a.peakFeels >= 108 ? "bad" : "warn", head: "Heat index " + a.peakFeels + "°F",
         body: a.peakFeels >= 108
           ? "Dangerous with exertion. Shade and water every 20 minutes, and don't put anyone out there alone."
           : "Water breaks. This is the range people go down in when they're working."
@@ -440,56 +451,140 @@
     var maxPop = Math.max(10, Math.max.apply(null, a.hours.map(function (h) { return h.pop; })));
     var bars = a.hours.map(function (h) {
       var wet = h.pop >= 60 ? 2 : h.pop >= 40 ? 1 : 0;
-      var pct = Math.max(3, Math.round((h.pop / maxPop) * 100));
-      return '<div class="wx__col" data-wet="' + wet + '"><div class="wx__bar" style="height:' + pct + '%"></div></div>';
+      return '<div class="wx__col" data-wet="' + wet + '"><div class="wx__bar" style="height:' + Math.max(3, Math.round((h.pop / maxPop) * 100)) + '%"></div></div>';
     }).join("");
-    var labels = a.hours.map(function (h, i) {
-      return '<div class="wx__hr">' + (i % 2 === 0 ? hhmm(h.when).replace(":00", "") : "") + "</div>";
-    }).join("");
+    var labels = a.hours.map(function (h, i) { return '<div class="wx__hr">' + (i % 2 === 0 ? hhmm(h.when).replace(":00", "") : "") + "</div>"; }).join("");
     var lines = weatherLines(a).map(function (l) {
       var cls = l.tone === "bad" ? " wx__dot--bad" : l.tone === "warn" ? " wx__dot--warn" : "";
       return '<div class="wx__line"><span class="wx__dot' + cls + '"></span><div><b>' + esc(l.head) + "</b>" + (l.body ? " <span>" + esc(l.body) + "</span>" : "") + "</div></div>";
     }).join("");
     var stale = ageMin > 90 ? '<div class="wx__stale">Cached ' + Math.round(ageMin / 60) + "h ago — you were offline when this loaded.</div>" : "";
-
-    return '<div class="wx">' +
-      '<div class="wx__top"><span class="wx__place">Ocala · next 10 hours</span>' +
+    return '<div class="wx"><div class="wx__top"><span class="wx__place">Ocala · next 10 hours</span>' +
       '<span class="wx__now"><b>' + a.current.temp + "°</b> &nbsp;feels " + a.current.feels + "° &nbsp;" + a.current.pop + "% rain</span></div>" +
-      '<div class="wx__chart">' + bars + "</div>" +
-      '<div class="wx__hours">' + labels + "</div>" +
+      '<div class="wx__chart">' + bars + '</div><div class="wx__hours">' + labels + "</div>" +
       '<div class="wx__verdict">' + lines + "</div>" + stale + "</div>";
   }
 
-  /* ================= RENDER ================= */
+  /* ============ quest model ============ */
 
-  function jobHTML(job) {
-    return '<li><label class="job"><input type="checkbox" data-job="' + esc(job.id) + '">' +
-      '<span class="job__text"><span class="job__title">' + esc(job.title) + "</span>" +
-      (job.note ? '<span class="job__note">' + esc(job.note) + "</span>" : "") + "</span></label></li>";
+  function buildQuests(d) {
+    var out = [];
+    (d.sections || []).forEach(function (sec) {
+      (sec.tickets || []).forEach(function (t, i) {
+        var first = (t.jobs && t.jobs[0]) ? t.jobs[0].id : String(i);
+        out.push({
+          key: slug(t.client) + "#" + first,
+          section: sec.label,
+          giver: t.client,
+          meta: t.meta, stamp: t.stamp, tone: t.tone || "normal",
+          chain: !!t.chain,
+          objectives: (t.jobs || []).map(function (j) { return { id: j.id, title: j.title, note: j.note }; })
+        });
+      });
+    });
+    overlay.custom.forEach(function (c) {
+      out.push({
+        key: c.key, section: "Your own", giver: c.giver, meta: "Added by you",
+        tone: "normal", chain: false, mine: true,
+        objectives: (c.objectives || []).map(function (o) { return { id: o.id, title: o.title }; })
+      });
+    });
+    return out;
   }
-  function ticketHTML(t) {
-    var cls = "ticket" + (t.tone === "critical" ? " ticket--critical" : t.tone === "flag" ? " ticket--flag" : "");
+
+  function objTitle(o) { return overlay.titles[o.id] != null ? overlay.titles[o.id] : o.title; }
+  function isDone(id) { return !!overlay.done[id]; }
+  function visibleObjs(q) { return q.objectives.filter(function (o) { return !overlay.hidden[o.id]; }); }
+
+  function questState(q) {
+    var objs = visibleObjs(q);
+    var done = objs.filter(function (o) { return isDone(o.id); }).length;
+    return { total: objs.length, done: done, complete: objs.length > 0 && done === objs.length, objs: objs };
+  }
+
+  // In a chained quest an objective can't be started until the one before it is
+  // cleared — the truck has to be empty before the tow truck is any use.
+  function lockedIndex(q, st) {
+    if (!q.chain) return -1;
+    for (var i = 0; i < st.objs.length; i++) if (!isDone(st.objs[i].id)) return i + 1;
+    return -1;
+  }
+
+  /* ============ render ============ */
+
+  function questHTML(q) {
+    var st = questState(q);
+    if (!st.total) return "";
+    var lockFrom = lockedIndex(q, st);
+    var pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
+
     var badge = "";
-    if (t.stamp) {
-      var sc = "stamp" + (t.stamp.tone === "critical" ? " stamp--critical" : t.stamp.tone === "flag" ? " stamp--flag" : "");
-      badge = '<span class="' + sc + '">' + esc(t.stamp.text) + "</span>";
-    } else if (t.meta) badge = '<span class="ticket__meta">' + esc(t.meta) + "</span>";
-    return '<article class="' + cls + '"><div class="ticket__stripe"></div><div class="ticket__body">' +
-      '<div class="ticket__head"><h3>' + esc(t.client) + "</h3>" + badge + "</div>" +
-      '<ul class="jobs">' + (t.jobs || []).map(jobHTML).join("") + "</ul></div></article>";
+    if (st.complete) badge = '<span class="pill pill--done">Cleared</span>';
+    else if (q.stamp) badge = '<span class="pill' + (q.stamp.tone === "critical" ? " pill--critical" : q.stamp.tone === "flag" ? " pill--flag" : "") + '">' + esc(q.stamp.text) + "</span>";
+    else if (q.meta) badge = '<span class="quest__meta">' + esc(q.meta) + "</span>";
+
+    var objs = st.objs.map(function (o, i) {
+      var locked = lockFrom >= 0 && i >= lockFrom;
+      var prev = locked && st.objs[i - 1] ? objTitle(st.objs[i - 1]) : "";
+      return '<li data-locked="' + (locked ? 1 : 0) + '"><label class="obj">' +
+        '<input type="checkbox" data-obj="' + esc(o.id) + '"' + (isDone(o.id) ? " checked" : "") + (locked ? " disabled" : "") + ">" +
+        '<span class="obj__text"><span class="obj__title" data-obj-title="' + esc(o.id) + '">' + esc(objTitle(o)) + "</span>" +
+        (o.note ? '<span class="obj__note">' + esc(o.note) + "</span>" : "") +
+        (locked ? '<span class="obj__lock">Locked until "' + esc(prev) + '"</span>' : "") +
+        '</span></label>' +
+        '<div class="quest__edit"><button class="mini mini--danger" data-hide-obj="' + esc(o.id) + '" type="button">Remove</button></div></li>';
+    }).join("");
+
+    return '<article class="quest" data-tone="' + esc(q.tone) + '" data-done="' + (st.complete ? 1 : 0) + '" data-key="' + esc(q.key) + '">' +
+      '<div class="quest__stripe"></div><div class="quest__body">' +
+      '<div class="quest__head"><h3 class="quest__giver">' + esc(q.giver) + "</h3>" + badge + "</div>" +
+      (st.total > 1 ? '<div class="quest__prog"><div class="quest__track"><div class="quest__fill" style="width:' + pct + '%"></div></div>' +
+        '<span class="quest__frac">' + st.done + "/" + st.total + "</span></div>" : "") +
+      '<ul class="objs">' + objs + "</ul>" +
+      '<div class="quest__edit">' +
+      '<button class="mini" data-move="up" type="button">↑</button>' +
+      '<button class="mini" data-move="down" type="button">↓</button>' +
+      '<button class="mini mini--danger" data-hide-quest="' + esc(q.key) + '" type="button">Hide quest</button>' +
+      "</div></div></article>";
   }
 
   function render(d, a, ageMin) {
+    lastWeather = { analysed: a, ageMin: ageMin };
+    var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
+
+    var allObjs = quests.reduce(function (n, q) { return n + questState(q).total; }, 0);
+    var allDone = quests.reduce(function (n, q) { return n + questState(q).done; }, 0);
+    var cleared = quests.filter(function (q) { return questState(q).complete; }).length;
+    var pct = allObjs ? Math.round((allDone / allObjs) * 100) : 0;
+
     var html = '<header class="mast"><div class="mast__rule"></div><div class="mast__row">' +
       "<h1>Evergreen <span>Dispatch</span></h1>" +
       '<div class="mast__date">' + esc(d.dateLabel) + "</div></div></header>";
+
+    html += '<div class="tally"><div class="tally__row"><span>Objectives</span><b>' + allDone + " / " + allObjs + "</b></div>" +
+      '<div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="tally__row"><span>Quests cleared</span><b>' + cleared + " / " + quests.length + "</b></div></div>";
+
+    html += '<div class="tools">' +
+      '<button class="tool" id="tShowDone" type="button" aria-pressed="' + (prefs.showDone ? "true" : "false") + '">' +
+        (prefs.showDone ? "Hide completed" : "Show completed") + ' <b>' + cleared + "</b></button>" +
+      '<button class="tool" id="tEdit" type="button" aria-pressed="false">Edit</button>' +
+      '<button class="tool" id="tSettings" type="button" aria-pressed="false">Settings</button></div>';
+
+    html += '<div class="settings" id="settingsPanel">' +
+      '<div class="field"><label for="voiceSel">Briefing voice</label>' +
+      '<select id="voiceSel"></select>' +
+      '<p>British male voices sound closest to what you\'re after. What\'s available depends on the device.</p></div>' +
+      '<div class="field"><label>Your edits</label>' +
+      '<button class="mini mini--danger" id="resetEdits" type="button" style="width:100%;min-height:46px">Reset everything I\'ve changed</button>' +
+      '<p>Renames, hidden quests, your own quests, and ticked boxes all live on this device only. Resetting brings the published board back.</p></div></div>';
 
     if (d.assessment) {
       html += '<div class="read"><div class="assessment">' + esc(d.assessment) + "</div>" +
         '<button class="speak" id="speak" type="button" data-on="0">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>' +
-        "<span id=\"speakLabel\">Brief me</span></button></div>";
+        '<span id="speakLabel">Brief me</span></button></div>';
     }
 
     html += weatherHTML(a, ageMin);
@@ -498,17 +593,31 @@
       html += '<section class="sec"><div class="sec__label">On the line</div><div class="risk">' +
         d.risk.map(function (r) {
           return '<div class="risk__row" data-tone="' + esc(r.tone || "normal") + '"><div class="risk__stripe"></div>' +
-            '<div class="risk__body"><div class="risk__label">' + esc(r.label) + "</div>" +
-            '<div class="risk__detail">' + esc(r.detail) + "</div>" +
+            '<div class="risk__body"><div class="risk__label">' + esc(r.label) + '</div><div class="risk__detail">' + esc(r.detail) + "</div>" +
             (r.note ? '<div class="risk__note">' + esc(r.note) + "</div>" : "") + "</div></div>";
         }).join("") + "</div></section>";
     }
 
-    (d.sections || []).forEach(function (s) {
-      html += '<section class="sec"><div class="sec__label">' + esc(s.label) +
-        (s.count ? ' <span class="sec__count">' + esc(s.count) + "</span>" : "") + "</div>" +
-        (s.tickets || []).map(ticketHTML).join("") + "</section>";
+    // Sections in published order, then anything he added himself.
+    var order = [];
+    (d.sections || []).forEach(function (s) { if (order.indexOf(s.label) < 0) order.push(s.label); });
+    if (overlay.custom.length) order.push("Your own");
+
+    order.forEach(function (label) {
+      var inSec = quests.filter(function (q) { return q.section === label; });
+      inSec = applyOrder(label, inSec);
+      var shown = inSec.filter(function (q) { return prefs.showDone || !questState(q).complete; });
+      if (!shown.length) return;
+      var open = inSec.filter(function (q) { return !questState(q).complete; }).length;
+      html += '<section class="sec" data-section="' + esc(label) + '"><div class="sec__label">' + esc(label) +
+        ' <span class="sec__count">' + open + " open</span></div>" +
+        shown.map(questHTML).join("") + "</section>";
     });
+
+    html += '<section class="sec"><div class="sec__label">Add your own</div>' +
+      '<div class="editbar"><p>Anything that isn\'t in Pocket — a personal errand, a reminder. It stays on this device.</p>' +
+      '<input id="newQuest" type="text" placeholder="e.g. Pick up mulch at 8" aria-label="New quest">' +
+      '<div class="row"><button class="btn" id="addQuest" type="button">Add quest</button></div></div></section>';
 
     if (d.questions && d.questions.length) {
       html += '<section class="sec"><div class="sec__label">Needs your call <span class="sec__count">' + d.questions.length + "</span></div>" +
@@ -521,7 +630,7 @@
           return '<div class="status__row"><span class="status__dot status__dot--' + (r.state === "on" ? "on" : "off") +
             '"></span><div><b>' + esc(r.name) + "</b> — <span>" + esc(r.note) + "</span></div></div>";
         }).join("") + "</div>" +
-        '<p class="note"><b>Ticking a box here is your own scratch mark.</b> It saves on this device, ' +
+        '<p class="note"><b>Ticking an objective is your own scratch mark.</b> It saves on this device, ' +
         "but does <b>not</b> write back to Pocket — to actually close a job, say it into Pocket.</p></section>";
     }
 
@@ -531,54 +640,207 @@
     app.innerHTML = html;
     app.hidden = false;
     lock.hidden = true;
+    wire(d);
+  }
 
-    wireChecks();
-    wireSpeech(d, a);
-    document.getElementById("forget").addEventListener("click", function () {
+  function applyOrder(label, list) {
+    var ord = overlay.order[label];
+    if (!ord || !ord.length) return list;
+    var pos = {};
+    ord.forEach(function (k, i) { pos[k] = i; });
+    return list.slice().sort(function (x, y) {
+      var a = pos[x.key] == null ? 9999 : pos[x.key];
+      var b = pos[y.key] == null ? 9999 : pos[y.key];
+      return a - b;
+    });
+  }
+
+  function redraw() { render(board, lastWeather.analysed, lastWeather.ageMin); }
+
+  /* ============ interaction ============ */
+
+  function wire(d) {
+    // objectives
+    app.querySelectorAll('.obj input[type="checkbox"]').forEach(function (b) {
+      b.addEventListener("change", function () {
+        var id = b.dataset.obj;
+        if (b.checked) overlay.done[id] = Date.now(); else delete overlay.done[id];
+        saveOverlay();
+        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+      });
+    });
+
+    var showDone = document.getElementById("tShowDone");
+    if (showDone) showDone.addEventListener("click", function () {
+      prefs.showDone = !prefs.showDone; savePrefs();
+      var y = window.scrollY; redraw(); window.scrollTo(0, y);
+    });
+
+    var tEdit = document.getElementById("tEdit");
+    if (tEdit) tEdit.addEventListener("click", function () {
+      var on = document.body.dataset.edit === "1";
+      document.body.dataset.edit = on ? "0" : "1";
+      tEdit.setAttribute("aria-pressed", on ? "false" : "true");
+      tEdit.textContent = on ? "Edit" : "Done editing";
+      app.querySelectorAll("[data-obj-title]").forEach(function (el) {
+        el.contentEditable = on ? "false" : "true";
+      });
+    });
+
+    var tSet = document.getElementById("tSettings");
+    if (tSet) tSet.addEventListener("click", function () {
+      var on = document.body.dataset.settings === "1";
+      document.body.dataset.settings = on ? "0" : "1";
+      tSet.setAttribute("aria-pressed", on ? "false" : "true");
+    });
+
+    // inline rename
+    app.querySelectorAll("[data-obj-title]").forEach(function (el) {
+      el.contentEditable = document.body.dataset.edit === "1" ? "true" : "false";
+      el.addEventListener("blur", function () {
+        var id = el.dataset.objTitle;
+        var text = el.textContent.trim();
+        if (!text) { el.textContent = objTitle({ id: id, title: "" }); return; }
+        overlay.titles[id] = text; saveOverlay();
+      });
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
+    });
+
+    app.querySelectorAll("[data-hide-obj]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        overlay.hidden[b.dataset.hideObj] = true; saveOverlay();
+        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+      });
+    });
+    app.querySelectorAll("[data-hide-quest]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        overlay.hidden[b.dataset.hideQuest] = true; saveOverlay();
+        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+      });
+    });
+
+    app.querySelectorAll("[data-move]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var card = b.closest(".quest");
+        var sec = b.closest(".sec");
+        if (!card || !sec) return;
+        var label = sec.dataset.section;
+        var keys = Array.prototype.map.call(sec.querySelectorAll(".quest"), function (c) { return c.dataset.key; });
+        var i = keys.indexOf(card.dataset.key);
+        var j = b.dataset.move === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= keys.length) return;
+        keys.splice(j, 0, keys.splice(i, 1)[0]);
+        overlay.order[label] = keys; saveOverlay();
+        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+      });
+    });
+
+    var addBtn = document.getElementById("addQuest");
+    var newQ = document.getElementById("newQuest");
+    function addQuest() {
+      var text = (newQ.value || "").trim();
+      if (!text) return;
+      var id = "own-" + Date.now().toString(36);
+      overlay.custom.push({ key: "own#" + id, giver: text, objectives: [{ id: id, title: text }] });
+      saveOverlay(); newQ.value = "";
+      var y = window.scrollY; redraw(); window.scrollTo(0, y);
+    }
+    if (addBtn) addBtn.addEventListener("click", addQuest);
+    if (newQ) newQ.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addQuest(); } });
+
+    var reset = document.getElementById("resetEdits");
+    if (reset) reset.addEventListener("click", function () {
+      if (!confirm("Undo every change you've made on this device — renames, hidden quests, your own quests, and ticked boxes?")) return;
+      overlay = blankOverlay(); saveOverlay(); redraw();
+    });
+
+    var forget = document.getElementById("forget");
+    if (forget) forget.addEventListener("click", function () {
       try { localStorage.removeItem(PASS_KEY); } catch (e) {}
       location.reload();
     });
+
+    wireVoices();
+    wireSpeech(d);
   }
 
-  function wireChecks() {
-    var saved = {};
-    try { saved = JSON.parse(localStorage.getItem(CHECK_KEY) || "{}"); } catch (e) {}
-    var boxes = app.querySelectorAll('.job input[type="checkbox"]');
-    boxes.forEach(function (b) {
-      if (saved[b.dataset.job]) b.checked = true;
-      b.addEventListener("change", function () {
-        var out = {};
-        boxes.forEach(function (x) { if (x.checked) out[x.dataset.job] = 1; });
-        try { localStorage.setItem(CHECK_KEY, JSON.stringify(out)); } catch (e) {}
-      });
+  /* ============ voice ============ */
+  // Closest thing to the voice he's after is a British male. Ordered by how
+  // well each actually lands, then widening out so every device gets something.
+  var VOICE_RANK = [
+    /^daniel/i, /arthur|oliver|jamie|malcolm/i,
+    /google uk english male/i, /microsoft (george|ryan|thomas)/i,
+    /en[-_]GB/i, /^alex$|david|guy|aaron/i
+  ];
+
+  function rankVoice(v) {
+    var s = (v.name || "") + " " + (v.lang || "");
+    for (var i = 0; i < VOICE_RANK.length; i++) if (VOICE_RANK[i].test(s)) return i;
+    return VOICE_RANK.length;
+  }
+  function englishVoices() {
+    var all = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
+    return all.filter(function (v) { return /^en/i.test(v.lang || ""); })
+      .sort(function (a, b) { return rankVoice(a) - rankVoice(b) || a.name.localeCompare(b.name); });
+  }
+  function chosenVoice() {
+    var list = englishVoices();
+    if (!list.length) return null;
+    if (prefs.voice) {
+      var exact = list.filter(function (v) { return v.name === prefs.voice; })[0];
+      if (exact) return exact;
+    }
+    return list[0];
+  }
+  function wireVoices() {
+    var sel = document.getElementById("voiceSel");
+    if (!sel || !("speechSynthesis" in window)) return;
+    function fill() {
+      var list = englishVoices();
+      if (!list.length) return;
+      var cur = chosenVoice();
+      sel.innerHTML = list.map(function (v, i) {
+        var tag = rankVoice(v) <= 1 ? " — closest match" : "";
+        return '<option value="' + esc(v.name) + '"' + (cur && v.name === cur.name ? " selected" : "") + ">" +
+          esc(v.name) + " (" + esc(v.lang) + ")" + tag + "</option>";
+      }).join("");
+    }
+    fill();
+    speechSynthesis.onvoiceschanged = fill;
+    sel.addEventListener("change", function () {
+      prefs.voice = sel.value; savePrefs();
+      try {
+        speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance("Board ready. Randall's mow is still open.");
+        var v = chosenVoice(); if (v) u.voice = v;
+        u.rate = 0.98; u.pitch = 0.88;
+        speechSynthesis.speak(u);
+      } catch (e) {}
     });
   }
 
-  /* ================= SPOKEN BRIEF ================= */
-  // Reads the day out loud so he can keep his eyes on the road.
-
-  function briefText(d, a) {
+  /* ============ spoken brief ============ */
+  function briefText(d) {
     var parts = [d.dateLabel + "."];
     if (d.assessment) parts.push(d.assessment);
-
+    var a = lastWeather.analysed;
     if (a) {
       var l = weatherLines(a)[0];
-      parts.push(l.head === "Mow window" ? "Mow window " + l.body.replace("—", ",") : l.body);
-      if (a.peakFeels >= 103) parts.push("Heat index peaks at " + a.peakFeels + " degrees. Take water breaks.");
+      parts.push(l.head === "Mow window" ? "Mow window, " + l.body.replace(/—/g, ",") : l.body);
+      if (a.peakFeels >= 100) parts.push("Heat index peaks at " + a.peakFeels + " degrees. Take water breaks.");
     }
-
-    (d.sections || []).forEach(function (s) {
-      var openJobs = [];
-      (s.tickets || []).forEach(function (t) {
-        (t.jobs || []).forEach(function (j) { openJobs.push(t.client + ", " + j.title); });
-      });
-      if (!openJobs.length) return;
-      // Only the front of the board gets read aloud — the rest is for looking at.
-      if (/overdue|today|teresa/i.test(s.label)) {
-        parts.push(s.label.split("·")[0].trim() + ". " + openJobs.join(". ") + ".");
-      }
-    });
-
+    var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
+    var open = quests.filter(function (q) { return !questState(q).complete; });
+    var front = open.filter(function (q) { return /overdue|today|teresa/i.test(q.section); });
+    if (front.length) {
+      parts.push(front.map(function (q) {
+        var st = questState(q);
+        var remaining = st.objs.filter(function (o) { return !isDone(o.id); }).map(objTitle);
+        return q.giver + ": " + remaining.join(", ");
+      }).join(". ") + ".");
+    }
+    var cleared = quests.length - open.length;
+    if (cleared) parts.push(cleared + (cleared === 1 ? " quest" : " quests") + " already cleared.");
     if (d.questions && d.questions.length) {
       parts.push(d.questions.length + (d.questions.length === 1 ? " thing needs" : " things need") + " your call. " +
         d.questions.map(function (q) { return q.q; }).join(" "));
@@ -586,59 +848,32 @@
     return parts.join(" ");
   }
 
-  function wireSpeech(d, a) {
-    var btnEl = document.getElementById("speak");
-    if (!btnEl) return;
+  function wireSpeech(d) {
+    var b = document.getElementById("speak");
+    if (!b) return;
     var label = document.getElementById("speakLabel");
-
-    if (!("speechSynthesis" in window)) {
-      btnEl.disabled = true;
-      label.textContent = "Speech not supported here";
-      return;
-    }
-
-    function reset() { btnEl.dataset.on = "0"; label.textContent = "Brief me"; }
-
-    btnEl.addEventListener("click", function () {
+    if (!("speechSynthesis" in window)) { b.disabled = true; label.textContent = "Speech not supported here"; return; }
+    function reset() { b.dataset.on = "0"; label.textContent = "Brief me"; }
+    b.addEventListener("click", function () {
       if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); reset(); return; }
-      var u = new SpeechSynthesisUtterance(briefText(d, a));
-      u.rate = 1.04; u.pitch = 0.96;
-      var v = speechSynthesis.getVoices().filter(function (x) { return /en[-_]/i.test(x.lang); });
-      var pick = v.find(function (x) { return /daniel|google uk english male|alex|david/i.test(x.name); }) || v[0];
-      if (pick) u.voice = pick;
-      u.onend = reset;
-      u.onerror = reset;
-      btnEl.dataset.on = "1"; label.textContent = "Stop";
+      var u = new SpeechSynthesisUtterance(briefText(d));
+      u.rate = 0.98; u.pitch = 0.88;
+      var v = chosenVoice(); if (v) u.voice = v;
+      u.onend = reset; u.onerror = reset;
+      b.dataset.on = "1"; label.textContent = "Stop";
       speechSynthesis.speak(u);
     });
-
-    window.addEventListener("beforeunload", function () { try { speechSynthesis.cancel(); } catch (e) {} });
   }
 
-  /* ================= BOOT ================= */
-
-  var deviceKey = null;
-  var currentPin = null;
-  var wxTicks = 0;
-
+  /* ============ boot & refresh ============ */
   async function fetchBundle() {
     var res = await fetch("data.enc.json", { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     return res.json();
   }
 
-  async function show(pinValue, weather) {
-    board = await decrypt(pinValue + ":" + deviceKey, bundle);
-    var y = window.scrollY;
-    render(board, weather.analysed, weather.ageMin);
-    window.scrollTo(0, y);
-  }
-
   async function attempt(pinValue, remember) {
-    // Throws if the PIN is wrong — AES-GCM fails closed, so a bad guess never
-    // yields readable output.
-    var probe = await decrypt(pinValue + ":" + deviceKey, bundle);
-    board = probe;
+    board = await decrypt(pinValue + ":" + deviceKey, bundle);
     currentPin = pinValue;
     if (remember) { try { localStorage.setItem(PASS_KEY, pinValue); } catch (e) {} }
     var w = await loadWeather();
@@ -646,31 +881,32 @@
     startRefresh();
   }
 
-  // Re-check for a fresh board once a minute, so a command spoken into Pocket
-  // shows up here without pulling to refresh. Only re-renders when the build
-  // stamp actually changed, and holds scroll position when it does.
   function startRefresh() {
     if (startRefresh.timer) return;
     startRefresh.timer = setInterval(async function () {
-      if (document.hidden || !currentPin) return;
+      if (document.hidden || !currentPin || document.body.dataset.edit === "1") return;
       try {
         var next = await fetchBundle();
         wxTicks++;
-        var refreshWx = wxTicks % 10 === 0;      // weather every ~10 min
         if (next.built !== bundle.built) {
           bundle = next;
           try { speechSynthesis.cancel(); } catch (e) {}
+          board = await decrypt(currentPin + ":" + deviceKey, bundle);
           var w = await loadWeather();
-          await show(currentPin, { analysed: w ? analyseWeather(w.data) : null, ageMin: w ? w.ageMin : 0 });
-        } else if (refreshWx) {
+          var y = window.scrollY;
+          render(board, w ? analyseWeather(w.data) : null, w ? w.ageMin : 0);
+          window.scrollTo(0, y);
+        } else if (wxTicks % 10 === 0) {
           var w2 = await loadWeather();
-          await show(currentPin, { analysed: w2 ? analyseWeather(w2.data) : null, ageMin: w2 ? w2.ageMin : 0 });
+          var y2 = window.scrollY;
+          render(board, w2 ? analyseWeather(w2.data) : null, w2 ? w2.ageMin : 0);
+          window.scrollTo(0, y2);
         }
-      } catch (e) { /* offline in a dead zone — try again next minute */ }
+      } catch (e) { /* dead zone — try again next minute */ }
     }, REFRESH_MS);
   }
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && currentPin) { wxTicks = 9; }   // force a weather pull on return
+    if (!document.hidden && currentPin) wxTicks = 9;
   });
 
   form.addEventListener("submit", async function (e) {
@@ -679,10 +915,22 @@
     if (!value) return;
     btn.disabled = true; err.textContent = "";
     try { await attempt(value, true); }
-    catch (ex) {
-      err.textContent = "That PIN didn't work.";
-      btn.disabled = false; pin.select();
-    }
+    catch (ex) { err.textContent = "That PIN didn't work."; btn.disabled = false; pin.select(); }
+  });
+
+  document.getElementById("setupForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var se = document.getElementById("setupErr");
+    var key = extractKey(document.getElementById("devkey").value);
+    if (!key) { se.textContent = "That doesn't look right — the link ends in a long run of letters and numbers. Paste the whole line."; return; }
+    storeDeviceKey(key);
+    deviceKey = readDeviceKey();
+    if (!deviceKey) { se.textContent = "This browser is blocking storage. Turn off Private Browsing and try again."; return; }
+    se.textContent = "";
+    document.getElementById("setupBox").open = false;
+    document.getElementById("lockMsg").textContent = "Enter your PIN.";
+    if (!bundle) { try { bundle = await fetchBundle(); } catch (ex) {} }
+    pin.focus();
   });
 
   (async function boot() {
@@ -690,25 +938,16 @@
       err.textContent = "This page needs HTTPS to decrypt. Open the https:// version.";
       btn.disabled = true; return;
     }
-
     try { bundle = await fetchBundle(); }
-    catch (ex) {
-      err.textContent = "Couldn't load the board data (" + ex.message + ").";
-      btn.disabled = true; return;
-    }
+    catch (ex) { err.textContent = "Couldn't load the board data (" + ex.message + ")."; btn.disabled = true; return; }
 
     deviceKey = captureDeviceKey();
-
     if (!deviceKey) {
-      // Never disable the PIN box — a dead keyboard reads as "broken app"
-      // rather than "this device needs setting up".
       document.getElementById("lockMsg").textContent = "This device needs setting up first.";
       document.getElementById("lockHint").innerHTML =
-        "Opening your setup link inside another app's browser (OneDrive, Messages, Gmail) " +
-        "sets it up in <em>that</em> browser, not this one. Paste the link above and it'll " +
-        "stick here.";
-      var box = document.getElementById("setupBox");
-      box.open = true;
+        "Opening your setup link inside another app's browser (OneDrive, Messages, Gmail) sets it up in " +
+        "<em>that</em> browser, not this one. Paste the link above and it'll stick here.";
+      document.getElementById("setupBox").open = true;
       document.getElementById("devkey").focus();
       return;
     }
@@ -721,34 +960,6 @@
     }
     pin.focus();
   })();
-
-  document.getElementById("setupForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-    var se = document.getElementById("setupErr");
-    var key = extractKey(document.getElementById("devkey").value);
-
-    if (!key) {
-      se.textContent = "That doesn't look right — the link ends in a long run of letters and numbers. Paste the whole line.";
-      return;
-    }
-
-    var persisted = storeDeviceKey(key);
-    deviceKey = readDeviceKey();
-    if (!deviceKey) {
-      se.textContent = "This browser is blocking storage. Turn off Private Browsing and try again.";
-      return;
-    }
-
-    se.textContent = "";
-    document.getElementById("setupBox").open = false;
-    document.getElementById("lockMsg").textContent = "Enter your PIN.";
-    document.getElementById("lockHint").textContent = persisted
-      ? "Your PIN alone can't open this board — it's only half the key. The other half is stored on this device and never leaves it."
-      : "Saved for this visit only — this browser won't let the page store anything, so you'll have to paste the link again next time.";
-
-    if (!bundle) { try { bundle = await fetchBundle(); } catch (ex) {} }
-    pin.focus();
-  });
 })();
 </script>
 </body>
