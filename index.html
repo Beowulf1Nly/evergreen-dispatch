@@ -66,6 +66,25 @@
   .lock__err { color:var(--critical); font-size:14.5px; min-height:20px; font-weight:550; }
   .lock__hint { font-size:13px; color:var(--ink-3); line-height:1.5; border-top:1px solid var(--rule); padding-top:14px; }
 
+  #setupBox { border:1px solid var(--rule); border-radius:10px; background:var(--card); }
+  #setupBox[open] { border-color:var(--accent); }
+  #setupBox summary {
+    cursor:pointer; list-style:none; padding:14px 15px; min-height:50px;
+    display:flex; align-items:center; font-size:15px; font-weight:650; color:var(--accent);
+  }
+  #setupBox summary::-webkit-details-marker { display:none; }
+  #setupBox summary::after { content:"+"; margin-left:auto; font-size:20px; line-height:1; color:var(--ink-3); }
+  #setupBox[open] summary::after { content:"–"; }
+  #setupBox summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  .setup__body { padding:0 15px 15px; display:flex; flex-direction:column; gap:11px; }
+  .setup__body p { margin:0; font-size:14px; color:var(--ink-2); line-height:1.5; }
+  #devkey {
+    font-family:var(--f-mono); font-size:14px; padding:13px 14px; border-radius:10px;
+    border:2px solid var(--rule); background:var(--paper); color:var(--ink);
+    width:100%; min-height:50px;
+  }
+  #devkey:focus { outline:none; border-color:var(--accent); }
+
   /* ---------- masthead ---------- */
   .mast { display:flex; flex-direction:column; gap:10px; }
   .mast__rule { height:5px; border-radius:3px; background:linear-gradient(90deg,var(--accent) 0 62%,var(--flag) 62% 84%,var(--critical) 84% 100%); }
@@ -194,12 +213,30 @@
     <h1>Evergreen Dispatch</h1>
     <p id="lockMsg">Enter your PIN.</p>
   </div>
+
   <form class="lock__form" id="lockForm">
     <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password"
            placeholder="••••" spellcheck="false" aria-label="PIN">
     <button class="btn" id="unlockBtn" type="submit">Unlock</button>
     <div class="lock__err" id="err" role="alert"></div>
   </form>
+
+  <details id="setupBox">
+    <summary id="setupSummary">Set up this device</summary>
+    <div class="setup__body">
+      <p>
+        Paste your setup link here — the whole thing, or just the long code from the
+        end of it. You only do this once per device.
+      </p>
+      <form class="lock__form" id="setupForm">
+        <input id="devkey" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+               autocapitalize="off" autocorrect="off" placeholder="Paste setup link" aria-label="Setup link or code">
+        <button class="btn" id="setupBtn" type="submit">Set up</button>
+        <div class="lock__err" id="setupErr" role="alert"></div>
+      </form>
+    </div>
+  </details>
+
   <p class="lock__hint" id="lockHint">
     Your PIN alone can't open this board — it's only half the key. The other half
     is stored on this device and never leaves it.
@@ -220,18 +257,56 @@
   var REFRESH_MS = 60000;                 // re-check the board every minute
 
   // Half the key lives on the device, never in the repo and never typed. It
-  // arrives once via the setup link's URL fragment (#k=…), which browsers never
-  // send to the server. Without it the published ciphertext can't be attacked
-  // by guessing a 4-digit PIN.
-  function captureDeviceKey() {
-    var m = /[#&]k=([0-9a-f]{24,})/i.exec(location.hash || "");
-    if (m) {
-      try { localStorage.setItem(DEVKEY_KEY, m[1].toLowerCase()); } catch (e) {}
-      // Strip it from the address bar so it isn't shoulder-surfed or shared by
-      // copying the URL.
-      history.replaceState(null, "", location.pathname + location.search);
+  // arrives via the setup link's URL fragment (#k=…), which browsers never send
+  // to the server. Without it the published ciphertext can't be attacked by
+  // guessing a 4-digit PIN.
+  //
+  // Storage is per-browser, so a link opened inside another app's in-app browser
+  // (OneDrive, Gmail, Messages) sets the key up in THAT browser and not Safari.
+  // Hence the paste-it-yourself fallback on the lock screen.
+
+  var memDeviceKey = null;   // used when localStorage is unavailable
+
+  // Accepts a whole setup link, the bare code, or the code typed in spaced or
+  // dashed groups — reading 32 characters off a screen is error-prone enough
+  // without forcing them to be contiguous.
+  function extractKey(text) {
+    var raw = String(text || "").trim();
+    var m = /([0-9a-f]{24,})/i.exec(raw);
+    if (m) return m[1].toLowerCase();
+    // Nothing contiguous — try again with separators removed. Only safe on
+    // input that isn't a URL, or "https" and friends would contribute letters.
+    if (!/[:/]/.test(raw)) {
+      var joined = raw.replace(/[\s-]+/g, "");
+      var m2 = /^([0-9a-f]{24,})$/i.exec(joined);
+      if (m2) return m2[1].toLowerCase();
     }
-    try { return localStorage.getItem(DEVKEY_KEY); } catch (e) { return null; }
+    return null;
+  }
+
+  function storeDeviceKey(key) {
+    memDeviceKey = key;
+    try {
+      localStorage.setItem(DEVKEY_KEY, key);
+      return localStorage.getItem(DEVKEY_KEY) === key;   // confirm it survived
+    } catch (e) { return false; }
+  }
+
+  function readDeviceKey() {
+    try { var v = localStorage.getItem(DEVKEY_KEY); if (v) return v; } catch (e) {}
+    return memDeviceKey;
+  }
+
+  function captureDeviceKey() {
+    var fromHash = extractKey(location.hash || "");
+    if (fromHash) {
+      var persisted = storeDeviceKey(fromHash);
+      // Only strip the fragment once we know it actually saved. If storage is
+      // blocked (Private Browsing), leaving it in the URL means a reload still
+      // works instead of silently locking him out of his own board.
+      if (persisted) history.replaceState(null, "", location.pathname + location.search);
+    }
+    return readDeviceKey();
   }
 
   var lock = document.getElementById("lock");
@@ -616,22 +691,26 @@
       btn.disabled = true; return;
     }
 
-    deviceKey = captureDeviceKey();
-    if (!deviceKey) {
-      document.getElementById("lockMsg").textContent =
-        "This device isn't set up yet.";
-      document.getElementById("lockHint").innerHTML =
-        "Your PIN is only half the key — the other half has to be installed on this " +
-        "device once, from your setup link. It's in <code>private/setup-link.txt</code> " +
-        "on your PC. Open that link here, then the PIN works from then on.";
-      pin.disabled = true; btn.disabled = true;
-      return;
-    }
-
     try { bundle = await fetchBundle(); }
     catch (ex) {
       err.textContent = "Couldn't load the board data (" + ex.message + ").";
       btn.disabled = true; return;
+    }
+
+    deviceKey = captureDeviceKey();
+
+    if (!deviceKey) {
+      // Never disable the PIN box — a dead keyboard reads as "broken app"
+      // rather than "this device needs setting up".
+      document.getElementById("lockMsg").textContent = "This device needs setting up first.";
+      document.getElementById("lockHint").innerHTML =
+        "Opening your setup link inside another app's browser (OneDrive, Messages, Gmail) " +
+        "sets it up in <em>that</em> browser, not this one. Paste the link above and it'll " +
+        "stick here.";
+      var box = document.getElementById("setupBox");
+      box.open = true;
+      document.getElementById("devkey").focus();
+      return;
     }
 
     var stored = null;
@@ -642,6 +721,34 @@
     }
     pin.focus();
   })();
+
+  document.getElementById("setupForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var se = document.getElementById("setupErr");
+    var key = extractKey(document.getElementById("devkey").value);
+
+    if (!key) {
+      se.textContent = "That doesn't look right — the link ends in a long run of letters and numbers. Paste the whole line.";
+      return;
+    }
+
+    var persisted = storeDeviceKey(key);
+    deviceKey = readDeviceKey();
+    if (!deviceKey) {
+      se.textContent = "This browser is blocking storage. Turn off Private Browsing and try again.";
+      return;
+    }
+
+    se.textContent = "";
+    document.getElementById("setupBox").open = false;
+    document.getElementById("lockMsg").textContent = "Enter your PIN.";
+    document.getElementById("lockHint").textContent = persisted
+      ? "Your PIN alone can't open this board — it's only half the key. The other half is stored on this device and never leaves it."
+      : "Saved for this visit only — this browser won't let the page store anything, so you'll have to paste the link again next time.";
+
+    if (!bundle) { try { bundle = await fetchBundle(); } catch (ex) {} }
+    pin.focus();
+  });
 })();
 </script>
 </body>

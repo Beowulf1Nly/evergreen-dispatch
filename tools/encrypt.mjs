@@ -93,13 +93,22 @@ async function main() {
     built: new Date().toISOString(),
   }, null, 2) + "\n", "utf8");
 
+  const grouped = (deviceKey.match(/.{1,4}/g) || []).join(" ");
+
   await writeFile(LINK_FILE,
-    `Open this link ONCE on each device (phone, PC), then add it to your home screen.\n` +
-    `The device remembers the key and strips it from the address bar. After that you\n` +
-    `only ever type your PIN.\n\n` +
+    `SETTING UP A DEVICE (phone or PC) — you only do this once each.\n` +
+    `=================================================================\n\n` +
+    `EASIEST: open this link on the device itself.\n\n` +
     `${SITE}#k=${deviceKey}\n\n` +
-    `Treat this link like a house key — anyone who has BOTH it and your PIN can read\n` +
-    `the board. It is gitignored and never published.\n`,
+    `  Careful: opening it from inside another app (OneDrive, Messages, Gmail)\n` +
+    `  can launch that app's own browser, which has SEPARATE storage. It'll set\n` +
+    `  up there and not in Safari or Chrome. If that happens, use the fallback.\n\n` +
+    `FALLBACK: go to ${SITE}\n` +
+    `tap "Set up this device", and enter this code:\n\n` +
+    `  ${grouped}\n\n` +
+    `  Spaces are fine — type it in groups of four. Then your PIN works normally.\n\n` +
+    `Treat all of the above like a house key: anyone with BOTH it and your PIN\n` +
+    `can read the board. This file is gitignored and never published.\n`,
     "utf8");
 
   console.log(`  Encrypted ${(Buffer.byteLength(b64(ciphertext)) / 1024).toFixed(1)} KB -> data.enc.json`);
