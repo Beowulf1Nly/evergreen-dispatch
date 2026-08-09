@@ -9,7 +9,6 @@
 <meta name="theme-color" content="#101210" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dispatch">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -18,7 +17,7 @@
   :root {
     --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
     --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
-    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB;
+    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB; --sky:#2C5F82; --sky-bg:#E3EDF3;
     --shadow:0 1px 2px rgba(21,26,22,.06), 0 4px 14px rgba(21,26,22,.05);
     --f-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --f-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
@@ -27,19 +26,19 @@
     :root {
       --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
       --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
-      --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114;
+      --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114; --sky:#84B8D8; --sky-bg:#16242C;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
     }
   }
   :root[data-theme="dark"] {
     --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
     --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
-    --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114;
+    --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114; --sky:#84B8D8; --sky-bg:#16242C;
   }
   :root[data-theme="light"] {
     --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
     --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
-    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB;
+    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB; --sky:#2C5F82; --sky-bg:#E3EDF3;
   }
 
   * { box-sizing: border-box; }
@@ -48,30 +47,20 @@
     margin:0; background:var(--paper); color:var(--ink);
     font-family:var(--f-ui); font-size:17px; line-height:1.45;
     -webkit-font-smoothing:antialiased;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
   }
-  .wrap { max-width:620px; margin:0 auto; padding:22px 16px 64px; display:flex; flex-direction:column; gap:30px; }
+  .wrap { max-width:620px; margin:0 auto; padding:22px 16px 64px; display:flex; flex-direction:column; gap:26px; }
 
-  /* ---------- lock screen ---------- */
+  /* ---------- lock ---------- */
   #lock { min-height:82vh; display:flex; flex-direction:column; justify-content:center; gap:22px; max-width:400px; margin:0 auto; padding:24px 20px; }
   .lock__mark { width:46px; height:46px; }
   #lock h1 { margin:0; font-size:24px; font-weight:800; letter-spacing:-.02em; }
   #lock p { margin:0; color:var(--ink-2); font-size:15px; }
   .lock__form { display:flex; flex-direction:column; gap:11px; }
-  #pin {
-    font-family:var(--f-mono); font-size:19px; letter-spacing:.06em;
-    padding:14px 15px; border-radius:10px; border:2px solid var(--rule);
-    background:var(--card); color:var(--ink); width:100%; min-height:52px;
-    text-align:center; text-transform:uppercase;
-  }
+  #pin { font-family:var(--f-mono); font-size:19px; letter-spacing:.06em; padding:14px 15px; border-radius:10px; border:2px solid var(--rule); background:var(--card); color:var(--ink); width:100%; min-height:52px; text-align:center; text-transform:uppercase; }
   #pin:focus { outline:none; border-color:var(--accent); }
   #pin::placeholder { color:var(--ink-3); letter-spacing:.12em; text-transform:none; }
-  .btn {
-    font-family:var(--f-ui); font-size:16px; font-weight:650;
-    padding:14px 18px; min-height:52px; border:none; border-radius:10px;
-    background:var(--accent); color:#fff; cursor:pointer; width:100%;
-  }
+  .btn { font-family:var(--f-ui); font-size:16px; font-weight:650; padding:14px 18px; min-height:52px; border:none; border-radius:10px; background:var(--accent); color:#fff; cursor:pointer; width:100%; }
   .btn:disabled { opacity:.55; cursor:default; }
   .btn:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
   .lock__err { color:var(--critical); font-size:14.5px; min-height:20px; font-weight:550; }
@@ -81,10 +70,64 @@
   .mast { display:flex; flex-direction:column; gap:10px; }
   .mast__rule { height:5px; border-radius:3px; background:linear-gradient(90deg,var(--accent) 0 62%,var(--flag) 62% 84%,var(--critical) 84% 100%); }
   .mast__row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
-  .mast h1 { margin:0; font-size:25px; font-weight:800; letter-spacing:-.02em; text-wrap:balance; }
+  .mast h1 { margin:0; font-size:25px; font-weight:800; letter-spacing:-.02em; }
   .mast h1 span { color:var(--accent); }
   .mast__date { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.07em; font-variant-numeric:tabular-nums; }
 
+  /* ---------- assessment + speak ---------- */
+  .read { display:flex; flex-direction:column; gap:12px; }
+  .assessment {
+    font-size:18.5px; line-height:1.5; font-weight:500; text-wrap:pretty;
+    padding-left:14px; border-left:3px solid var(--accent);
+  }
+  .speak {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    font-family:var(--f-ui); font-size:16px; font-weight:650;
+    min-height:54px; width:100%; padding:14px 18px;
+    border:1.5px solid var(--accent); border-radius:11px;
+    background:var(--accent-bg); color:var(--accent); cursor:pointer;
+  }
+  .speak[data-on="1"] { background:var(--accent); color:#fff; }
+  .speak:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .speak svg { width:19px; height:19px; flex:none; }
+
+  /* ---------- weather ---------- */
+  .wx { border:1px solid var(--rule); border-radius:11px; background:var(--card); box-shadow:var(--shadow); overflow:hidden; }
+  .wx__top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:12px 15px 8px; flex-wrap:wrap; }
+  .wx__place { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--ink-2); }
+  .wx__now { font-family:var(--f-mono); font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .wx__now b { color:var(--ink); font-size:16px; font-weight:700; }
+
+  .wx__chart { display:flex; align-items:flex-end; gap:3px; height:56px; padding:0 15px; }
+  .wx__col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%; gap:3px; min-width:0; }
+  .wx__bar { width:100%; border-radius:2px 2px 0 0; background:var(--sky); opacity:.32; min-height:2px; }
+  .wx__col[data-wet="1"] .wx__bar { opacity:1; }
+  .wx__col[data-wet="2"] .wx__bar { opacity:1; background:var(--critical); }
+  .wx__hours { display:flex; gap:3px; padding:5px 15px 0; }
+  .wx__hr { flex:1; text-align:center; font-family:var(--f-mono); font-size:9.5px; color:var(--ink-3); min-width:0; overflow:hidden; }
+
+  .wx__verdict { display:flex; flex-direction:column; gap:5px; padding:11px 15px 13px; border-top:1px solid var(--rule); margin-top:9px; font-size:14.5px; }
+  .wx__line { display:flex; gap:9px; align-items:flex-start; }
+  .wx__dot { flex:none; width:9px; height:9px; border-radius:50%; margin-top:6px; background:var(--accent); }
+  .wx__dot--warn { background:var(--flag); }
+  .wx__dot--bad  { background:var(--critical); }
+  .wx__line b { font-weight:650; }
+  .wx__line span { color:var(--ink-2); }
+  .wx__stale { padding:9px 15px; font-size:12.5px; color:var(--flag); background:var(--flag-bg); border-top:1px solid var(--rule); }
+
+  /* ---------- risk ---------- */
+  .risk { border:1px solid var(--rule); border-radius:11px; background:var(--card); overflow:hidden; box-shadow:var(--shadow); }
+  .risk__row { display:flex; gap:11px; padding:12px 15px; border-top:1px solid var(--rule); }
+  .risk__row:first-child { border-top:none; }
+  .risk__stripe { flex:none; width:4px; border-radius:2px; background:var(--ink-3); }
+  .risk__row[data-tone="critical"] .risk__stripe { background:var(--critical); }
+  .risk__row[data-tone="flag"] .risk__stripe { background:var(--flag); }
+  .risk__body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .risk__label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-2); }
+  .risk__detail { font-weight:650; font-size:16px; }
+  .risk__note { font-size:14px; color:var(--ink-2); }
+
+  /* ---------- sections / tickets ---------- */
   .sec { display:flex; flex-direction:column; gap:12px; }
   .sec__label { display:flex; align-items:center; gap:10px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--ink-2); }
   .sec__label::after { content:""; flex:1; height:1px; background:var(--rule); }
@@ -136,7 +179,7 @@
   .lockbtn { background:none; border:none; color:var(--ink-3); font-family:var(--f-mono); font-size:11px; text-transform:uppercase; letter-spacing:.07em; cursor:pointer; padding:4px; }
   .lockbtn:hover { color:var(--critical); }
 
-  @media (max-width:420px) { body { font-size:16px; } .mast h1 { font-size:22px; } }
+  @media (max-width:420px) { body { font-size:16px; } .mast h1 { font-size:22px; } .assessment { font-size:17px; } }
   @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 </style>
 </head>
@@ -171,6 +214,8 @@
 
   var PASS_KEY = "evergreen-pass";
   var CHECK_KEY = "evergreen-checks";
+  var WX_KEY = "evergreen-wx";
+  var LAT = 29.1872, LON = -82.1401;      // Ocala, FL
 
   var lock = document.getElementById("lock");
   var app = document.getElementById("app");
@@ -179,64 +224,182 @@
   var err = document.getElementById("err");
   var btn = document.getElementById("unlockBtn");
 
-  var bundle = null;
+  var bundle = null, board = null, wx = null;
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-
   function b64ToBytes(b64) {
-    var bin = atob(b64);
-    var out = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) { out[i] = bin.charCodeAt(i); }
+    var bin = atob(b64), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
 
   async function decrypt(passphrase, data) {
-    var material = await crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]
-    );
+    var material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
     var key = await crypto.subtle.deriveKey(
       { name: "PBKDF2", salt: b64ToBytes(data.salt), iterations: data.iterations, hash: "SHA-256" },
       material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
     );
-    var plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64ToBytes(data.iv) }, key, b64ToBytes(data.ct)
-    );
+    var plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64ToBytes(data.iv) }, key, b64ToBytes(data.ct));
     return JSON.parse(new TextDecoder().decode(plain));
   }
 
-  /* ---------- rendering ---------- */
+  /* ================= WEATHER ================= */
+  // Open-Meteo: no key, CORS-open, so this stays live even when the PC that
+  // builds the board is off. Cached so a dead-zone doesn't blank the panel.
 
-  function jobHTML(job) {
-    return '<li><label class="job">' +
-      '<input type="checkbox" data-job="' + esc(job.id) + '">' +
-      '<span class="job__text"><span class="job__title">' + esc(job.title) + "</span>" +
-      (job.note ? '<span class="job__note">' + esc(job.note) + "</span>" : "") +
-      "</span></label></li>";
+  async function loadWeather() {
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT + "&longitude=" + LON +
+      "&hourly=precipitation_probability,apparent_temperature,temperature_2m" +
+      "&daily=sunset&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=2";
+    try {
+      var res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var j = await res.json();
+      var payload = { at: Date.now(), data: j };
+      try { localStorage.setItem(WX_KEY, JSON.stringify(payload)); } catch (e) {}
+      return { data: j, ageMin: 0 };
+    } catch (e) {
+      try {
+        var cached = JSON.parse(localStorage.getItem(WX_KEY) || "null");
+        if (cached) return { data: cached.data, ageMin: Math.round((Date.now() - cached.at) / 60000) };
+      } catch (e2) {}
+      return null;
+    }
   }
 
+  function analyseWeather(j) {
+    var now = new Date();
+    var idx = j.hourly.time.findIndex(function (t) { return new Date(t) >= now; });
+    if (idx < 0) return null;
+
+    var sunset = new Date(j.daily.sunset[0]);
+    var hours = [];
+    for (var i = idx; i < j.hourly.time.length && hours.length < 11; i++) {
+      var when = new Date(j.hourly.time[i]);
+      hours.push({
+        when: when,
+        label: j.hourly.time[i].slice(11, 13),
+        pop: j.hourly.precipitation_probability[i],
+        feels: Math.round(j.hourly.apparent_temperature[i]),
+        temp: Math.round(j.hourly.temperature_2m[i]),
+        daylight: when <= sunset
+      });
+    }
+
+    // Longest run of workable daylight hours (rain chance under 40%).
+    var best = null, run = null;
+    hours.forEach(function (h) {
+      if (h.pop < 40 && h.daylight) {
+        if (!run) run = { start: h, end: h, len: 1 };
+        else { run.end = h; run.len++; }
+        if (!best || run.len > best.len) best = { start: run.start, end: run.end, len: run.len };
+      } else { run = null; }
+    });
+
+    var wettest = hours.filter(function (h) { return h.daylight; })
+      .reduce(function (a, h) { return (!a || h.pop > a.pop) ? h : a; }, null);
+    var peakFeels = hours.filter(function (h) { return h.daylight; })
+      .reduce(function (a, h) { return (a == null || h.feels > a) ? h.feels : a; }, null);
+
+    return { hours: hours, best: best, wettest: wettest, peakFeels: peakFeels, sunset: sunset, current: hours[0] };
+  }
+
+  function hhmm(d) {
+    var h = d.getHours(), m = d.getMinutes();
+    var ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12;
+    return h + (m ? ":" + String(m).padStart(2, "0") : "") + ap;
+  }
+
+  function weatherLines(a) {
+    var out = [];
+    if (a.best && a.best.len >= 2) {
+      var endHr = new Date(a.best.end.when.getTime() + 3600000);
+      out.push({ tone: "ok", head: "Mow window", body: hhmm(a.best.start.when) + " to " + hhmm(endHr) + " — rain chance stays under 40%." });
+    } else {
+      out.push({ tone: "bad", head: "No clear window", body: "Rain chance is over 40% for most of the daylight left." });
+    }
+    if (a.wettest && a.wettest.pop >= 40) {
+      out.push({ tone: a.wettest.pop >= 60 ? "bad" : "warn", head: "Rain builds", body: a.wettest.pop + "% around " + hhmm(a.wettest.when) + ". Get the mowing in before it." });
+    }
+    if (a.peakFeels != null && a.peakFeels >= 103) {
+      out.push({ tone: a.peakFeels >= 110 ? "bad" : "warn", head: "Heat index " + a.peakFeels + "°F", body: a.peakFeels >= 110 ? "Dangerous. Shade and water every 20 minutes." : "Water breaks — this is the range people go down in." });
+    }
+    out.push({ tone: "ok", head: "Sunset " + hhmm(a.sunset), body: "" });
+    return out;
+  }
+
+  function weatherHTML(a, ageMin) {
+    if (!a) return '<div class="wx"><div class="wx__verdict"><div class="wx__line"><span class="wx__dot wx__dot--warn"></span><div><b>Weather unavailable</b> <span>— no signal, and nothing cached yet.</span></div></div></div></div>';
+    var maxPop = Math.max(10, Math.max.apply(null, a.hours.map(function (h) { return h.pop; })));
+    var bars = a.hours.map(function (h) {
+      var wet = h.pop >= 60 ? 2 : h.pop >= 40 ? 1 : 0;
+      var pct = Math.max(3, Math.round((h.pop / maxPop) * 100));
+      return '<div class="wx__col" data-wet="' + wet + '"><div class="wx__bar" style="height:' + pct + '%"></div></div>';
+    }).join("");
+    var labels = a.hours.map(function (h, i) {
+      return '<div class="wx__hr">' + (i % 2 === 0 ? hhmm(h.when).replace(":00", "") : "") + "</div>";
+    }).join("");
+    var lines = weatherLines(a).map(function (l) {
+      var cls = l.tone === "bad" ? " wx__dot--bad" : l.tone === "warn" ? " wx__dot--warn" : "";
+      return '<div class="wx__line"><span class="wx__dot' + cls + '"></span><div><b>' + esc(l.head) + "</b>" + (l.body ? " <span>" + esc(l.body) + "</span>" : "") + "</div></div>";
+    }).join("");
+    var stale = ageMin > 90 ? '<div class="wx__stale">Cached ' + Math.round(ageMin / 60) + "h ago — you were offline when this loaded.</div>" : "";
+
+    return '<div class="wx">' +
+      '<div class="wx__top"><span class="wx__place">Ocala · next 10 hours</span>' +
+      '<span class="wx__now"><b>' + a.current.temp + "°</b> &nbsp;feels " + a.current.feels + "° &nbsp;" + a.current.pop + "% rain</span></div>" +
+      '<div class="wx__chart">' + bars + "</div>" +
+      '<div class="wx__hours">' + labels + "</div>" +
+      '<div class="wx__verdict">' + lines + "</div>" + stale + "</div>";
+  }
+
+  /* ================= RENDER ================= */
+
+  function jobHTML(job) {
+    return '<li><label class="job"><input type="checkbox" data-job="' + esc(job.id) + '">' +
+      '<span class="job__text"><span class="job__title">' + esc(job.title) + "</span>" +
+      (job.note ? '<span class="job__note">' + esc(job.note) + "</span>" : "") + "</span></label></li>";
+  }
   function ticketHTML(t) {
     var cls = "ticket" + (t.tone === "critical" ? " ticket--critical" : t.tone === "flag" ? " ticket--flag" : "");
     var badge = "";
     if (t.stamp) {
-      var stampCls = "stamp" + (t.stamp.tone === "critical" ? " stamp--critical" : t.stamp.tone === "flag" ? " stamp--flag" : "");
-      badge = '<span class="' + stampCls + '">' + esc(t.stamp.text) + "</span>";
-    } else if (t.meta) {
-      badge = '<span class="ticket__meta">' + esc(t.meta) + "</span>";
-    }
+      var sc = "stamp" + (t.stamp.tone === "critical" ? " stamp--critical" : t.stamp.tone === "flag" ? " stamp--flag" : "");
+      badge = '<span class="' + sc + '">' + esc(t.stamp.text) + "</span>";
+    } else if (t.meta) badge = '<span class="ticket__meta">' + esc(t.meta) + "</span>";
     return '<article class="' + cls + '"><div class="ticket__stripe"></div><div class="ticket__body">' +
       '<div class="ticket__head"><h3>' + esc(t.client) + "</h3>" + badge + "</div>" +
-      '<ul class="jobs">' + (t.jobs || []).map(jobHTML).join("") + "</ul>" +
-      "</div></article>";
+      '<ul class="jobs">' + (t.jobs || []).map(jobHTML).join("") + "</ul></div></article>";
   }
 
-  function render(d) {
+  function render(d, a, ageMin) {
     var html = '<header class="mast"><div class="mast__rule"></div><div class="mast__row">' +
       "<h1>Evergreen <span>Dispatch</span></h1>" +
       '<div class="mast__date">' + esc(d.dateLabel) + "</div></div></header>";
+
+    if (d.assessment) {
+      html += '<div class="read"><div class="assessment">' + esc(d.assessment) + "</div>" +
+        '<button class="speak" id="speak" type="button" data-on="0">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>' +
+        "<span id=\"speakLabel\">Brief me</span></button></div>";
+    }
+
+    html += weatherHTML(a, ageMin);
+
+    if (d.risk && d.risk.length) {
+      html += '<section class="sec"><div class="sec__label">On the line</div><div class="risk">' +
+        d.risk.map(function (r) {
+          return '<div class="risk__row" data-tone="' + esc(r.tone || "normal") + '"><div class="risk__stripe"></div>' +
+            '<div class="risk__body"><div class="risk__label">' + esc(r.label) + "</div>" +
+            '<div class="risk__detail">' + esc(r.detail) + "</div>" +
+            (r.note ? '<div class="risk__note">' + esc(r.note) + "</div>" : "") + "</div></div>";
+        }).join("") + "</div></section>";
+    }
 
     (d.sections || []).forEach(function (s) {
       html += '<section class="sec"><div class="sec__label">' + esc(s.label) +
@@ -245,22 +408,18 @@
     });
 
     if (d.questions && d.questions.length) {
-      html += '<section class="sec"><div class="sec__label">Needs your call <span class="sec__count">' +
-        d.questions.length + "</span></div>" +
-        d.questions.map(function (q) {
-          return '<div class="q"><strong>' + esc(q.q) + "</strong><p>" + esc(q.note) + "</p></div>";
-        }).join("") + "</section>";
+      html += '<section class="sec"><div class="sec__label">Needs your call <span class="sec__count">' + d.questions.length + "</span></div>" +
+        d.questions.map(function (q) { return '<div class="q"><strong>' + esc(q.q) + "</strong><p>" + esc(q.note) + "</p></div>"; }).join("") + "</section>";
     }
 
     if (d.system && d.system.length) {
       html += '<section class="sec"><div class="sec__label">System</div><div class="status">' +
         d.system.map(function (r) {
-          return '<div class="status__row"><span class="status__dot status__dot--' +
-            (r.state === "on" ? "on" : "off") + '"></span><div><b>' + esc(r.name) +
-            "</b> — <span>" + esc(r.note) + "</span></div></div>";
+          return '<div class="status__row"><span class="status__dot status__dot--' + (r.state === "on" ? "on" : "off") +
+            '"></span><div><b>' + esc(r.name) + "</b> — <span>" + esc(r.note) + "</span></div></div>";
         }).join("") + "</div>" +
         '<p class="note"><b>Ticking a box here is your own scratch mark.</b> It saves on this device, ' +
-        "but does <b>not</b> write back to Pocket yet — to actually close a job, say it into Pocket.</p></section>";
+        "but does <b>not</b> write back to Pocket — to actually close a job, say it into Pocket.</p></section>";
     }
 
     html += '<footer><span>Evergreen Lawn Care · Ocala &amp; Citrus Hills</span>' +
@@ -269,8 +428,9 @@
     app.innerHTML = html;
     app.hidden = false;
     lock.hidden = true;
-    wireChecks();
 
+    wireChecks();
+    wireSpeech(d, a);
     document.getElementById("forget").addEventListener("click", function () {
       try { localStorage.removeItem(PASS_KEY); } catch (e) {}
       location.reload();
@@ -282,59 +442,116 @@
     try { saved = JSON.parse(localStorage.getItem(CHECK_KEY) || "{}"); } catch (e) {}
     var boxes = app.querySelectorAll('.job input[type="checkbox"]');
     boxes.forEach(function (b) {
-      if (saved[b.dataset.job]) { b.checked = true; }
+      if (saved[b.dataset.job]) b.checked = true;
       b.addEventListener("change", function () {
         var out = {};
-        boxes.forEach(function (x) { if (x.checked) { out[x.dataset.job] = 1; } });
+        boxes.forEach(function (x) { if (x.checked) out[x.dataset.job] = 1; });
         try { localStorage.setItem(CHECK_KEY, JSON.stringify(out)); } catch (e) {}
       });
     });
   }
 
-  /* ---------- boot ---------- */
+  /* ================= SPOKEN BRIEF ================= */
+  // Reads the day out loud so he can keep his eyes on the road.
+
+  function briefText(d, a) {
+    var parts = [d.dateLabel + "."];
+    if (d.assessment) parts.push(d.assessment);
+
+    if (a) {
+      var l = weatherLines(a)[0];
+      parts.push(l.head === "Mow window" ? "Mow window " + l.body.replace("—", ",") : l.body);
+      if (a.peakFeels >= 103) parts.push("Heat index peaks at " + a.peakFeels + " degrees. Take water breaks.");
+    }
+
+    (d.sections || []).forEach(function (s) {
+      var openJobs = [];
+      (s.tickets || []).forEach(function (t) {
+        (t.jobs || []).forEach(function (j) { openJobs.push(t.client + ", " + j.title); });
+      });
+      if (!openJobs.length) return;
+      // Only the front of the board gets read aloud — the rest is for looking at.
+      if (/overdue|today|teresa/i.test(s.label)) {
+        parts.push(s.label.split("·")[0].trim() + ". " + openJobs.join(". ") + ".");
+      }
+    });
+
+    if (d.questions && d.questions.length) {
+      parts.push(d.questions.length + (d.questions.length === 1 ? " thing needs" : " things need") + " your call. " +
+        d.questions.map(function (q) { return q.q; }).join(" "));
+    }
+    return parts.join(" ");
+  }
+
+  function wireSpeech(d, a) {
+    var btnEl = document.getElementById("speak");
+    if (!btnEl) return;
+    var label = document.getElementById("speakLabel");
+
+    if (!("speechSynthesis" in window)) {
+      btnEl.disabled = true;
+      label.textContent = "Speech not supported here";
+      return;
+    }
+
+    function reset() { btnEl.dataset.on = "0"; label.textContent = "Brief me"; }
+
+    btnEl.addEventListener("click", function () {
+      if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); reset(); return; }
+      var u = new SpeechSynthesisUtterance(briefText(d, a));
+      u.rate = 1.04; u.pitch = 0.96;
+      var v = speechSynthesis.getVoices().filter(function (x) { return /en[-_]/i.test(x.lang); });
+      var pick = v.find(function (x) { return /daniel|google uk english male|alex|david/i.test(x.name); }) || v[0];
+      if (pick) u.voice = pick;
+      u.onend = reset;
+      u.onerror = reset;
+      btnEl.dataset.on = "1"; label.textContent = "Stop";
+      speechSynthesis.speak(u);
+    });
+
+    window.addEventListener("beforeunload", function () { try { speechSynthesis.cancel(); } catch (e) {} });
+  }
+
+  /* ================= BOOT ================= */
 
   async function attempt(passphrase, remember) {
-    var data = await decrypt(passphrase, bundle);
+    board = await decrypt(passphrase, bundle);
     if (remember) { try { localStorage.setItem(PASS_KEY, passphrase); } catch (e) {} }
-    render(data);
+    var w = await loadWeather();
+    var analysed = w ? analyseWeather(w.data) : null;
+    render(board, analysed, w ? w.ageMin : 0);
   }
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
     var value = pin.value.trim();
-    if (!value) { return; }
-    btn.disabled = true;
-    err.textContent = "";
-    try {
-      await attempt(value, true);
-    } catch (ex) {
-      err.textContent = "That passphrase didn't work. Check for a typo — it's case-insensitive on the dashes, not the letters.";
-      btn.disabled = false;
-      pin.select();
+    if (!value) return;
+    btn.disabled = true; err.textContent = "";
+    try { await attempt(value, true); }
+    catch (ex) {
+      err.textContent = "That passphrase didn't work. Check for a typo.";
+      btn.disabled = false; pin.select();
     }
   });
 
   (async function boot() {
     if (!window.isSecureContext || !crypto.subtle) {
       err.textContent = "This page needs HTTPS to decrypt. Open the https:// version.";
-      btn.disabled = true;
-      return;
+      btn.disabled = true; return;
     }
     try {
       var res = await fetch("data.enc.json", { cache: "no-store" });
-      if (!res.ok) { throw new Error("HTTP " + res.status); }
+      if (!res.ok) throw new Error("HTTP " + res.status);
       bundle = await res.json();
     } catch (ex) {
       err.textContent = "Couldn't load the board data (" + ex.message + ").";
-      btn.disabled = true;
-      return;
+      btn.disabled = true; return;
     }
     var stored = null;
     try { stored = localStorage.getItem(PASS_KEY); } catch (e) {}
     if (stored) {
-      try { await attempt(stored, false); return; } catch (ex) {
-        try { localStorage.removeItem(PASS_KEY); } catch (e2) {}
-      }
+      try { await attempt(stored, false); return; }
+      catch (ex) { try { localStorage.removeItem(PASS_KEY); } catch (e2) {} }
     }
     pin.focus();
   })();
