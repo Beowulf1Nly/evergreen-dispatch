@@ -281,6 +281,12 @@
 (function () {
   "use strict";
 
+  // Stamped by tools/publish.mjs on every build. GitHub Pages serves this file
+  // with max-age=600 and a home-screen icon can hold it far longer than that,
+  // so the app has to notice it's stale and replace itself — refreshing the
+  // board data alone leaves old code running against new data.
+  var APP_VERSION = "6f8ffe0a2448"; /* @@VERSION@@ */
+
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
   var OVERLAY_KEY = "evergreen-overlay";
@@ -865,6 +871,23 @@
     });
   }
 
+  /* ============ self-update ============ */
+  // Compares the running build against the deployed one and swaps itself out.
+  // The ?v= query is what actually defeats the cache — a plain reload would be
+  // served the same stale file.
+  async function checkAppVersion() {
+    if (APP_VERSION === "dev") return;                       // local/unbuilt copy
+    if (document.body.dataset.edit === "1") return;           // never yank mid-edit
+    try {
+      var r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      var deployed = (await r.json()).app;
+      if (deployed && deployed !== APP_VERSION) {
+        location.replace(location.pathname + "?v=" + encodeURIComponent(deployed));
+      }
+    } catch (e) { /* offline — check again next tick */ }
+  }
+
   /* ============ boot & refresh ============ */
   async function fetchBundle() {
     var res = await fetch("data.enc.json", { cache: "no-store" });
@@ -885,6 +908,7 @@
     if (startRefresh.timer) return;
     startRefresh.timer = setInterval(async function () {
       if (document.hidden || !currentPin || document.body.dataset.edit === "1") return;
+      await checkAppVersion();
       try {
         var next = await fetchBundle();
         wxTicks++;
@@ -905,8 +929,11 @@
       } catch (e) { /* dead zone — try again next minute */ }
     }, REFRESH_MS);
   }
+  // Picking the phone back up is the likeliest moment to be running stale code.
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && currentPin) wxTicks = 9;
+    if (document.hidden) return;
+    checkAppVersion();
+    if (currentPin) wxTicks = 9;
   });
 
   form.addEventListener("submit", async function (e) {

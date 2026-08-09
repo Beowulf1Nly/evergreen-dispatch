@@ -31,8 +31,12 @@ if (!existsSync(SRC)) {
 const srcHash = createHash("sha256").update(readFileSync(SRC)).digest("hex");
 const lastHash = existsSync(HASH_FILE) ? readFileSync(HASH_FILE, "utf8").trim() : "";
 
-if (srcHash === lastHash && !git("status", "--porcelain", "--", "data.enc.json")) {
-  console.log("  Board is unchanged since the last publish. Nothing to do.\n");
+// The app itself counts as a change too. Skipping the build when only
+// index.html moved would ship new code that never gets a new version stamp,
+// so phones would keep running the old copy forever.
+const dirty = git("status", "--porcelain");
+if (srcHash === lastHash && !dirty) {
+  console.log("  Board and app are both unchanged since the last publish. Nothing to do.\n");
   process.exit(0);
 }
 
@@ -51,6 +55,27 @@ step("encrypt", () =>
   execFileSync(process.execPath, [join(ROOT, "tools", "encrypt.mjs")], { stdio: "inherit" })
 );
 
+// 1b. Stamp the app build so a phone running old code can notice and replace
+// itself. Hash the file with the version line blanked, otherwise stamping it
+// would change the hash that produced it.
+const INDEX = join(ROOT, "index.html");
+const VERSION_FILE = join(ROOT, "version.json");
+const VERSION_RE = /var APP_VERSION = "[^"]*";/;
+
+let indexSrc = readFileSync(INDEX, "utf8");
+if (!VERSION_RE.test(indexSrc)) {
+  console.error('\n  index.html has no `var APP_VERSION = "…";` line to stamp.\n');
+  process.exit(1);
+}
+const appVersion = createHash("sha256")
+  .update(indexSrc.replace(VERSION_RE, 'var APP_VERSION = "";'))
+  .digest("hex")
+  .slice(0, 12);
+
+const stamped = indexSrc.replace(VERSION_RE, `var APP_VERSION = "${appVersion}";`);
+if (stamped !== indexSrc) writeFileSync(INDEX, stamped, "utf8");
+writeFileSync(VERSION_FILE, JSON.stringify({ app: appVersion }, null, 2) + "\n", "utf8");
+
 // 2. commit
 const stamp = new Date().toLocaleString("en-US", {
   timeZone: "America/New_York",
@@ -59,7 +84,8 @@ const stamp = new Date().toLocaleString("en-US", {
 });
 
 step("git commit", () => {
-  git("add", "--", "data.enc.json");
+  git("add", "-A");
+  if (!git("status", "--porcelain")) return;   // nothing staged after all
   git("commit", "-m", `Board update — ${stamp}`);
 });
 
@@ -68,5 +94,6 @@ step("git push", () => git("push"));
 
 writeFileSync(HASH_FILE, srcHash + "\n", "utf8");
 
-console.log(`\n  Published. Pages redeploys in about a minute.`);
+console.log(`\n  Published as build ${appVersion}. Pages redeploys in about a minute.`);
+console.log(`  Phones on an older build swap themselves out within a minute of that.`);
 console.log(`  https://beowulf1nly.github.io/evergreen-dispatch/\n`);
