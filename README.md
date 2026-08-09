@@ -16,14 +16,27 @@ in the repo in readable form.
 | `tools/encrypt.mjs` | Build step: plaintext → ciphertext |
 | `private/` | **Never committed.** Plaintext board + your passphrase. |
 
-## Your passphrase
+## The key is in two parts
 
-It lives in `private/passphrase.txt` on your PC. `.gitignore` keeps that folder out
-of the repo, and the build script deliberately never prints it to the terminal.
+| Part | Where | Role |
+|---|---|---|
+| **PIN** | `private/pin.txt` | The 4 digits you type |
+| **Device key** | `private/devicekey.txt` | 128 bits, installed once per device |
 
-Lost it? There's no recovery — delete `private/passphrase.txt`, run the build again
-to generate a new one, and hit "Forget passphrase on this device" on any phone or PC
-that had the old one cached.
+**Both are required.** This matters: a 4-digit PIN on its own could never protect a
+ciphertext published to a public repo — all 10,000 combinations fall in well under a
+second offline. The device key is what actually carries the entropy, so the PIN can
+stay short enough to thumb in at a stoplight.
+
+The device key reaches a phone or PC through the URL fragment in
+`private/setup-link.txt`. Fragments are never sent to a server, so it never touches
+GitHub. The page stores it and strips it from the address bar on first load.
+
+Set up a new device: open the setup link on it once, then use the PIN forever after.
+
+Lost the device key? Delete `private/devicekey.txt`, re-run the build for a fresh one,
+and open the new setup link on each device. Old devices stop working, which is also
+how you revoke one.
 
 ## Updating the board
 
