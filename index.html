@@ -94,6 +94,37 @@
   .tally__track { height:7px; border-radius:4px; background:var(--rule); overflow:hidden; }
   .tally__fill { height:100%; background:var(--accent); border-radius:4px; transition:width .3s ease; }
 
+  /* ---------- tabs ---------- */
+  .tabs {
+    display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab {
+    flex:0 0 auto; min-height:44px; padding:9px 14px;
+    font-family:var(--f-ui); font-size:14px; font-weight:650;
+    border:1px solid var(--rule); border-radius:999px; background:var(--card);
+    color:var(--ink-2); cursor:pointer; display:flex; align-items:center; gap:7px; white-space:nowrap;
+  }
+  .tab[aria-selected="true"] { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .tab:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .tab__n { font-family:var(--f-mono); font-size:11.5px; font-variant-numeric:tabular-nums; opacity:.75; }
+  .tab[data-urgent="1"] .tab__n { color:var(--critical); opacity:1; font-weight:700; }
+  .tab[aria-selected="true"][data-urgent="1"] .tab__n { color:#fff; }
+
+  .empty { padding:22px 15px; text-align:center; color:var(--ink-3); font-size:15px; border:1px dashed var(--rule); border-radius:10px; }
+
+  /* ---------- save toast ---------- */
+  #toast {
+    position:fixed; left:50%; transform:translateX(-50%) translateY(20px);
+    bottom:calc(18px + env(safe-area-inset-bottom)); z-index:50;
+    background:var(--ink); color:var(--paper); font-size:14px; font-weight:600;
+    padding:11px 17px; border-radius:999px; box-shadow:0 6px 22px rgba(0,0,0,.28);
+    opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+    max-width:calc(100vw - 32px); text-align:center;
+  }
+  #toast[data-show="1"] { opacity:1; transform:translateX(-50%) translateY(0); }
+
   /* ---------- toolbar ---------- */
   .tools { display:flex; gap:8px; flex-wrap:wrap; }
   .tool {
@@ -276,6 +307,7 @@
 </div>
 
 <div class="wrap" id="app" hidden></div>
+<div id="toast" role="status" aria-live="polite" data-show="0"></div>
 
 <script>
 (function () {
@@ -285,7 +317,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "6f8ffe0a2448"; /* @@VERSION@@ */
+  var APP_VERSION = "0deef8fd2415"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -375,8 +407,35 @@
   if (!Array.isArray(overlay.custom)) overlay.custom = [];
   function saveOverlay() { save(OVERLAY_KEY, overlay); }
 
-  var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false };
+  var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false, tab: "Today" };
+  if (!prefs.tab) prefs.tab = "Today";
   function savePrefs() { save(PREFS_KEY, prefs); }
+  var activeTab = prefs.tab;
+
+  // Every change is device-local, so it has to *say* it saved. A silent write
+  // is indistinguishable from a lost one, which is exactly what he asked not
+  // to have happen.
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    if (!el) return;
+    el.textContent = msg;
+    el.dataset.show = "1";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.dataset.show = "0"; }, 1900);
+  }
+
+  // Single write path for local edits: mutate, persist, confirm, redraw in place.
+  // Everything that changes the overlay goes through here so nothing can save
+  // without saying so, and nothing can redraw without having saved.
+  function commit(msg, mutate) {
+    mutate();
+    saveOverlay();
+    var y = window.scrollY;
+    redraw();
+    window.scrollTo(0, y);
+    if (msg) toast(msg);
+  }
 
   /* ============ weather ============ */
   async function loadWeather() {
@@ -473,29 +532,38 @@
 
   /* ============ quest model ============ */
 
+  // Tabs, in the order they read best from a truck. "Today" cuts across every
+  // category; the rest are the categories themselves.
+  var TABS = ["Today", "Clients", "Leads", "Crew", "Equipment", "Money", "Admin", "Yours"];
+  var WHEN_LABEL = { overdue: "Overdue", today: "Today", week: "This week", open: "No date" };
+  var WHEN_ORDER = { overdue: 0, today: 1, week: 2, open: 3 };
+
   function buildQuests(d) {
-    var out = [];
-    (d.sections || []).forEach(function (sec) {
-      (sec.tickets || []).forEach(function (t, i) {
-        var first = (t.jobs && t.jobs[0]) ? t.jobs[0].id : String(i);
-        out.push({
-          key: slug(t.client) + "#" + first,
-          section: sec.label,
-          giver: t.client,
-          meta: t.meta, stamp: t.stamp, tone: t.tone || "normal",
-          chain: !!t.chain,
-          objectives: (t.jobs || []).map(function (j) { return { id: j.id, title: j.title, note: j.note }; })
-        });
-      });
+    var out = (d.quests || []).map(function (q, i) {
+      return {
+        key: q.id || (slug(q.giver) + "#" + i),
+        giver: q.giver,
+        category: q.category || "Admin",
+        when: q.when || "open",
+        due: q.due,
+        meta: q.meta, stamp: q.stamp, tone: q.tone || "normal",
+        chain: !!q.chain,
+        objectives: (q.objectives || []).map(function (o) { return { id: o.id, title: o.title, note: o.note }; })
+      };
     });
     overlay.custom.forEach(function (c) {
       out.push({
-        key: c.key, section: "Your own", giver: c.giver, meta: "Added by you",
-        tone: "normal", chain: false, mine: true,
+        key: c.key, giver: c.giver, category: "Yours", when: c.when || "today",
+        meta: "Added by you", tone: "normal", chain: false, mine: true,
         objectives: (c.objectives || []).map(function (o) { return { id: o.id, title: o.title }; })
       });
     });
     return out;
+  }
+
+  function inTab(q, tab) {
+    if (tab === "Today") return q.when === "overdue" || q.when === "today";
+    return q.category === tab;
   }
 
   function objTitle(o) { return overlay.titles[o.id] != null ? overlay.titles[o.id] : o.title; }
@@ -571,6 +639,19 @@
       '<div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
       '<div class="tally__row"><span>Quests cleared</span><b>' + cleared + " / " + quests.length + "</b></div></div>";
 
+    // Tabs. A tab with nothing left in it is dropped rather than sitting there
+    // empty, except the one currently open.
+    var tabHTML = TABS.map(function (t) {
+      var mine = quests.filter(function (q) { return inTab(q, t); });
+      var open = mine.filter(function (q) { return !questState(q).complete; });
+      if (!mine.length && t !== activeTab) return "";
+      var urgent = open.some(function (q) { return q.when === "overdue" || q.tone === "critical"; });
+      return '<button class="tab" role="tab" data-tab="' + esc(t) + '" data-urgent="' + (urgent ? 1 : 0) + '"' +
+        ' aria-selected="' + (t === activeTab ? "true" : "false") + '">' + esc(t) +
+        '<span class="tab__n">' + open.length + "</span></button>";
+    }).join("");
+    html += '<div class="tabs" role="tablist">' + tabHTML + "</div>";
+
     html += '<div class="tools">' +
       '<button class="tool" id="tShowDone" type="button" aria-pressed="' + (prefs.showDone ? "true" : "false") + '">' +
         (prefs.showDone ? "Hide completed" : "Show completed") + ' <b>' + cleared + "</b></button>" +
@@ -580,7 +661,7 @@
     html += '<div class="settings" id="settingsPanel">' +
       '<div class="field"><label for="voiceSel">Briefing voice</label>' +
       '<select id="voiceSel"></select>' +
-      '<p>British male voices sound closest to what you\'re after. What\'s available depends on the device.</p></div>' +
+      '<p id="voiceHint">Checking what this device has installed…</p></div>' +
       '<div class="field"><label>Your edits</label>' +
       '<button class="mini mini--danger" id="resetEdits" type="button" style="width:100%;min-height:46px">Reset everything I\'ve changed</button>' +
       '<p>Renames, hidden quests, your own quests, and ticked boxes all live on this device only. Resetting brings the published board back.</p></div></div>';
@@ -604,21 +685,32 @@
         }).join("") + "</div></section>";
     }
 
-    // Sections in published order, then anything he added himself.
-    var order = [];
-    (d.sections || []).forEach(function (s) { if (order.indexOf(s.label) < 0) order.push(s.label); });
-    if (overlay.custom.length) order.push("Your own");
+    // Inside the open tab, group by when the work is due — overdue first.
+    var tabQuests = quests.filter(function (q) { return inTab(q, activeTab); });
+    var groups = [];
+    Object.keys(WHEN_ORDER).sort(function (a, b) { return WHEN_ORDER[a] - WHEN_ORDER[b]; })
+      .forEach(function (w) {
+        var g = applyOrder(activeTab + "/" + w, tabQuests.filter(function (q) { return q.when === w; }));
+        if (g.length) groups.push({ when: w, quests: g });
+      });
 
-    order.forEach(function (label) {
-      var inSec = quests.filter(function (q) { return q.section === label; });
-      inSec = applyOrder(label, inSec);
-      var shown = inSec.filter(function (q) { return prefs.showDone || !questState(q).complete; });
+    var anyShown = false;
+    groups.forEach(function (g) {
+      var shown = g.quests.filter(function (q) { return prefs.showDone || !questState(q).complete; });
       if (!shown.length) return;
-      var open = inSec.filter(function (q) { return !questState(q).complete; }).length;
-      html += '<section class="sec" data-section="' + esc(label) + '"><div class="sec__label">' + esc(label) +
+      anyShown = true;
+      var open = g.quests.filter(function (q) { return !questState(q).complete; }).length;
+      html += '<section class="sec" data-section="' + esc(activeTab + "/" + g.when) + '">' +
+        '<div class="sec__label">' + esc(WHEN_LABEL[g.when] || g.when) +
         ' <span class="sec__count">' + open + " open</span></div>" +
         shown.map(questHTML).join("") + "</section>";
     });
+
+    if (!anyShown) {
+      html += '<div class="empty">' + (tabQuests.length
+        ? "Everything in " + esc(activeTab) + " is cleared. Turn on Show completed to see it."
+        : "Nothing in " + esc(activeTab) + " right now.") + "</div>";
+    }
 
     html += '<section class="sec"><div class="sec__label">Add your own</div>' +
       '<div class="editbar"><p>Anything that isn\'t in Pocket — a personal errand, a reminder. It stays on this device.</p>' +
@@ -666,13 +758,23 @@
   /* ============ interaction ============ */
 
   function wire(d) {
-    // objectives
+    app.querySelectorAll("[data-tab]").forEach(function (t) {
+      t.addEventListener("click", function () {
+        activeTab = t.dataset.tab;
+        prefs.tab = activeTab; savePrefs();
+        redraw();
+        window.scrollTo(0, 0);
+      });
+    });
+
     app.querySelectorAll('.obj input[type="checkbox"]').forEach(function (b) {
       b.addEventListener("change", function () {
         var id = b.dataset.obj;
-        if (b.checked) overlay.done[id] = Date.now(); else delete overlay.done[id];
-        saveOverlay();
-        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+        var name = (app.querySelector('[data-obj-title="' + CSS.escape(id) + '"]') || {}).textContent || "Objective";
+        var nowDone = b.checked;
+        commit(nowDone ? "Ticked off — " + name : "Un-ticked — " + name, function () {
+          if (nowDone) overlay.done[id] = Date.now(); else delete overlay.done[id];
+        });
       });
     });
 
@@ -703,25 +805,29 @@
     // inline rename
     app.querySelectorAll("[data-obj-title]").forEach(function (el) {
       el.contentEditable = document.body.dataset.edit === "1" ? "true" : "false";
+      var before = el.textContent.trim();
+      el.addEventListener("focus", function () { before = el.textContent.trim(); });
       el.addEventListener("blur", function () {
         var id = el.dataset.objTitle;
         var text = el.textContent.trim();
-        if (!text) { el.textContent = objTitle({ id: id, title: "" }); return; }
-        overlay.titles[id] = text; saveOverlay();
+        if (text === before) return;                       // nothing changed, stay quiet
+        if (!text) {                                        // cleared it -> back to published wording
+          commit("Name reset", function () { delete overlay.titles[id]; });
+          return;
+        }
+        commit("Renamed", function () { overlay.titles[id] = text; });
       });
       el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
     });
 
     app.querySelectorAll("[data-hide-obj]").forEach(function (b) {
       b.addEventListener("click", function () {
-        overlay.hidden[b.dataset.hideObj] = true; saveOverlay();
-        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+        commit("Objective removed", function () { overlay.hidden[b.dataset.hideObj] = true; });
       });
     });
     app.querySelectorAll("[data-hide-quest]").forEach(function (b) {
       b.addEventListener("click", function () {
-        overlay.hidden[b.dataset.hideQuest] = true; saveOverlay();
-        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+        commit("Quest hidden", function () { overlay.hidden[b.dataset.hideQuest] = true; });
       });
     });
 
@@ -736,8 +842,7 @@
         var j = b.dataset.move === "up" ? i - 1 : i + 1;
         if (j < 0 || j >= keys.length) return;
         keys.splice(j, 0, keys.splice(i, 1)[0]);
-        overlay.order[label] = keys; saveOverlay();
-        var y = window.scrollY; redraw(); window.scrollTo(0, y);
+        commit("Order saved", function () { overlay.order[label] = keys; });
       });
     });
 
@@ -746,10 +851,15 @@
     function addQuest() {
       var text = (newQ.value || "").trim();
       if (!text) return;
+      // Refuse an exact duplicate rather than quietly stacking two identical
+      // quests he'd then have to notice and clean up.
+      var dup = overlay.custom.some(function (c) { return c.giver.toLowerCase() === text.toLowerCase(); });
+      if (dup) { toast("You already have that one"); newQ.value = ""; return; }
       var id = "own-" + Date.now().toString(36);
-      overlay.custom.push({ key: "own#" + id, giver: text, objectives: [{ id: id, title: text }] });
-      saveOverlay(); newQ.value = "";
-      var y = window.scrollY; redraw(); window.scrollTo(0, y);
+      newQ.value = "";
+      commit("Added to Yours", function () {
+        overlay.custom.push({ key: "own#" + id, giver: text, when: "today", objectives: [{ id: id, title: text }] });
+      });
     }
     if (addBtn) addBtn.addEventListener("click", addQuest);
     if (newQ) newQ.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addQuest(); } });
@@ -757,7 +867,8 @@
     var reset = document.getElementById("resetEdits");
     if (reset) reset.addEventListener("click", function () {
       if (!confirm("Undo every change you've made on this device — renames, hidden quests, your own quests, and ticked boxes?")) return;
-      overlay = blankOverlay(); saveOverlay(); redraw();
+      overlay = blankOverlay();
+      commit("Reset to the published board", function () {});
     });
 
     var forget = document.getElementById("forget");
@@ -773,21 +884,58 @@
   /* ============ voice ============ */
   // Closest thing to the voice he's after is a British male. Ordered by how
   // well each actually lands, then widening out so every device gets something.
-  var VOICE_RANK = [
-    /^daniel/i, /arthur|oliver|jamie|malcolm/i,
-    /google uk english male/i, /microsoft (george|ryan|thomas)/i,
-    /en[-_]GB/i, /^alex$|david|guy|aaron/i
-  ];
-
+  // Lower score wins. The single biggest quality jump is the engine tier —
+  // a "Natural"/"Neural"/"Premium"/"Enhanced" voice sounds nothing like the
+  // default compact one, which is what makes stock TTS sound robotic.
   function rankVoice(v) {
-    var s = (v.name || "") + " " + (v.lang || "");
-    for (var i = 0; i < VOICE_RANK.length; i++) if (VOICE_RANK[i].test(s)) return i;
-    return VOICE_RANK.length;
+    var name = v.name || "", lang = v.lang || "", s = 0;
+    if (/en[-_]GB/i.test(lang)) s -= 100;                                    // British first
+    if (/natural|neural|premium|enhanced|online|siri/i.test(name)) s -= 60;  // high-quality engine
+    if (/daniel|arthur|oliver|jamie|malcolm|ryan|thomas|george/i.test(name)) s -= 25;
+    if (/compact/i.test(name)) s += 60;                                       // the tinny ones
+    if (/female|samantha|karen|moira|tessa|zira|hazel|serena|fiona|martha/i.test(name)) s += 40;
+    return s;
   }
+  function voiceIsGood(v) { return /natural|neural|premium|enhanced|online|siri/i.test(v.name || ""); }
   function englishVoices() {
     var all = ("speechSynthesis" in window) ? speechSynthesis.getVoices() : [];
     return all.filter(function (v) { return /^en/i.test(v.lang || ""); })
       .sort(function (a, b) { return rankVoice(a) - rankVoice(b) || a.name.localeCompare(b.name); });
+  }
+
+  // Speaking one long block is most of why it sounds like a machine reading a
+  // list. Break it into sentences and leave a beat between them.
+  function splitSentences(text) {
+    var out = [], buf = "";
+    for (var i = 0; i < text.length; i++) {
+      buf += text[i];
+      if (/[.!?:]/.test(text[i]) && (i + 1 >= text.length || /\s/.test(text[i + 1]))) {
+        if (buf.trim().length > 1) { out.push(buf.trim()); buf = ""; }
+      }
+    }
+    if (buf.trim()) out.push(buf.trim());
+    return out;
+  }
+
+  var speaking = false;
+  function speakSequence(text, onDone) {
+    var chunks = splitSentences(text);
+    var voice = chosenVoice();
+    var i = 0;
+    speaking = true;
+    (function next() {
+      if (!speaking || i >= chunks.length) { speaking = false; onDone && onDone(); return; }
+      var u = new SpeechSynthesisUtterance(chunks[i++]);
+      if (voice) u.voice = voice;
+      u.rate = 0.97; u.pitch = 0.9;
+      u.onend = function () { setTimeout(next, 240); };   // a beat, not a gulp
+      u.onerror = function () { speaking = false; onDone && onDone(); };
+      speechSynthesis.speak(u);
+    })();
+  }
+  function stopSpeaking() {
+    speaking = false;
+    try { speechSynthesis.cancel(); } catch (e) {}
   }
   function chosenVoice() {
     var list = englishVoices();
@@ -805,23 +953,29 @@
       var list = englishVoices();
       if (!list.length) return;
       var cur = chosenVoice();
-      sel.innerHTML = list.map(function (v, i) {
-        var tag = rankVoice(v) <= 1 ? " — closest match" : "";
+      sel.innerHTML = list.map(function (v) {
+        var tag = voiceIsGood(v) ? " ★" : "";
         return '<option value="' + esc(v.name) + '"' + (cur && v.name === cur.name ? " selected" : "") + ">" +
           esc(v.name) + " (" + esc(v.lang) + ")" + tag + "</option>";
       }).join("");
+
+      // If nothing installed is above the compact tier, say so — no amount of
+      // tuning fixes a low-quality engine, and the fix is a two-minute download.
+      var hint = document.getElementById("voiceHint");
+      if (hint) {
+        hint.textContent = list.some(voiceIsGood)
+          ? "Voices marked ★ use the high-quality engine. British male sounds closest to what you're after."
+          : "This device only has basic voices installed, which is why it sounds robotic — no setting fixes that. "
+            + "iPhone: Settings → Accessibility → Spoken Content → Voices → English → Daniel (Premium). "
+            + "Windows: Settings → Time & Language → Speech → Manage voices → add English (United Kingdom).";
+      }
     }
     fill();
     speechSynthesis.onvoiceschanged = fill;
     sel.addEventListener("change", function () {
       prefs.voice = sel.value; savePrefs();
-      try {
-        speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance("Board ready. Randall's mow is still open.");
-        var v = chosenVoice(); if (v) u.voice = v;
-        u.rate = 0.98; u.pitch = 0.88;
-        speechSynthesis.speak(u);
-      } catch (e) {}
+      stopSpeaking();
+      speakSequence("Board ready. Randall's mow is still open, and it's already paid for.");
     });
   }
 
@@ -837,14 +991,16 @@
     }
     var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
     var open = quests.filter(function (q) { return !questState(q).complete; });
-    var front = open.filter(function (q) { return /overdue|today|teresa/i.test(q.section); });
-    if (front.length) {
-      parts.push(front.map(function (q) {
-        var st = questState(q);
-        var remaining = st.objs.filter(function (o) { return !isDone(o.id); }).map(objTitle);
+
+    ["overdue", "today"].forEach(function (w) {
+      var g = open.filter(function (q) { return q.when === w; });
+      if (!g.length) return;
+      parts.push((w === "overdue" ? "Overdue." : "Today.") + " " + g.map(function (q) {
+        var remaining = questState(q).objs.filter(function (o) { return !isDone(o.id); }).map(objTitle);
         return q.giver + ": " + remaining.join(", ");
       }).join(". ") + ".");
-    }
+    });
+
     var cleared = quests.length - open.length;
     if (cleared) parts.push(cleared + (cleared === 1 ? " quest" : " quests") + " already cleared.");
     if (d.questions && d.questions.length) {
@@ -861,13 +1017,9 @@
     if (!("speechSynthesis" in window)) { b.disabled = true; label.textContent = "Speech not supported here"; return; }
     function reset() { b.dataset.on = "0"; label.textContent = "Brief me"; }
     b.addEventListener("click", function () {
-      if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); reset(); return; }
-      var u = new SpeechSynthesisUtterance(briefText(d));
-      u.rate = 0.98; u.pitch = 0.88;
-      var v = chosenVoice(); if (v) u.voice = v;
-      u.onend = reset; u.onerror = reset;
+      if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); reset(); return; }
       b.dataset.on = "1"; label.textContent = "Stop";
-      speechSynthesis.speak(u);
+      speakSequence(briefText(d), reset);
     });
   }
 
@@ -914,7 +1066,7 @@
         wxTicks++;
         if (next.built !== bundle.built) {
           bundle = next;
-          try { speechSynthesis.cancel(); } catch (e) {}
+          stopSpeaking();
           board = await decrypt(currentPin + ":" + deviceKey, bundle);
           var w = await loadWeather();
           var y = window.scrollY;
