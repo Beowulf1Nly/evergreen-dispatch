@@ -317,16 +317,27 @@
   function weatherLines(a) {
     var out = [];
     if (a.best && a.best.len >= 2) {
-      var endHr = new Date(a.best.end.when.getTime() + 3600000);
-      out.push({ tone: "ok", head: "Mow window", body: hhmm(a.best.start.when) + " to " + hhmm(endHr) + " — rain chance stays under 40%." });
+      // The last dry hour runs to the top of the next hour — but never past
+      // sunset. Promising daylight that isn't there sends him out to a yard
+      // he can't finish.
+      var endHr = new Date(Math.min(a.best.end.when.getTime() + 3600000, a.sunset.getTime()));
+      out.push({ tone: "ok", head: "Mow window", body: hhmm(a.best.start.when) + " to " + hhmm(endHr) + " — rain under 40%, and that's when the light goes." });
     } else {
       out.push({ tone: "bad", head: "No clear window", body: "Rain chance is over 40% for most of the daylight left." });
     }
     if (a.wettest && a.wettest.pop >= 40) {
       out.push({ tone: a.wettest.pop >= 60 ? "bad" : "warn", head: "Rain builds", body: a.wettest.pop + "% around " + hhmm(a.wettest.when) + ". Get the mowing in before it." });
     }
-    if (a.peakFeels != null && a.peakFeels >= 103) {
-      out.push({ tone: a.peakFeels >= 110 ? "bad" : "warn", head: "Heat index " + a.peakFeels + "°F", body: a.peakFeels >= 110 ? "Dangerous. Shade and water every 20 minutes." : "Water breaks — this is the range people go down in." });
+    // NOAA puts 103°F+ in "Danger", but that assumes you're sitting still.
+    // Pushing a mower in full sun, the exertion cases start well below that.
+    if (a.peakFeels != null && a.peakFeels >= 100) {
+      out.push({
+        tone: a.peakFeels >= 108 ? "bad" : "warn",
+        head: "Heat index " + a.peakFeels + "°F",
+        body: a.peakFeels >= 108
+          ? "Dangerous with exertion. Shade and water every 20 minutes, and don't put anyone out there alone."
+          : "Water breaks. This is the range people go down in when they're working."
+      });
     }
     out.push({ tone: "ok", head: "Sunset " + hhmm(a.sunset), body: "" });
     return out;
