@@ -1,0 +1,5 @@
+# Never commit these. The whole point of this repo is that the public
+# copy contains nothing but ciphertext.
+private/
+*.local
+node_modules/

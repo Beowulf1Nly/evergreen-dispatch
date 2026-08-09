@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Evergreen Dispatch</title>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#F5F3EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101210" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dispatch">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+
+<style>
+  :root {
+    --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
+    --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
+    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB;
+    --shadow:0 1px 2px rgba(21,26,22,.06), 0 4px 14px rgba(21,26,22,.05);
+    --f-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
+      --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
+      --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#101210; --card:#191C18; --ink:#E9EAE4; --ink-2:#9BA197; --ink-3:#6E756B;
+    --rule:#2C302B; --accent:#74C489; --accent-bg:#1A2A1F; --critical:#F08A70;
+    --critical-bg:#301A15; --flag:#DCB166; --flag-bg:#2A2114;
+  }
+  :root[data-theme="light"] {
+    --paper:#F5F3EE; --card:#FFFFFF; --ink:#151A16; --ink-2:#5C6359; --ink-3:#8A9086;
+    --rule:#DCD8CD; --accent:#1E6B3C; --accent-bg:#E5EFE8; --critical:#BC3318;
+    --critical-bg:#FAE6E1; --flag:#86601F; --flag-bg:#F6EEDB;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--f-ui); font-size:17px; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .wrap { max-width:620px; margin:0 auto; padding:22px 16px 64px; display:flex; flex-direction:column; gap:30px; }
+
+  /* ---------- lock screen ---------- */
+  #lock { min-height:82vh; display:flex; flex-direction:column; justify-content:center; gap:22px; max-width:400px; margin:0 auto; padding:24px 20px; }
+  .lock__mark { width:46px; height:46px; }
+  #lock h1 { margin:0; font-size:24px; font-weight:800; letter-spacing:-.02em; }
+  #lock p { margin:0; color:var(--ink-2); font-size:15px; }
+  .lock__form { display:flex; flex-direction:column; gap:11px; }
+  #pin {
+    font-family:var(--f-mono); font-size:19px; letter-spacing:.06em;
+    padding:14px 15px; border-radius:10px; border:2px solid var(--rule);
+    background:var(--card); color:var(--ink); width:100%; min-height:52px;
+    text-align:center; text-transform:uppercase;
+  }
+  #pin:focus { outline:none; border-color:var(--accent); }
+  #pin::placeholder { color:var(--ink-3); letter-spacing:.12em; text-transform:none; }
+  .btn {
+    font-family:var(--f-ui); font-size:16px; font-weight:650;
+    padding:14px 18px; min-height:52px; border:none; border-radius:10px;
+    background:var(--accent); color:#fff; cursor:pointer; width:100%;
+  }
+  .btn:disabled { opacity:.55; cursor:default; }
+  .btn:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .lock__err { color:var(--critical); font-size:14.5px; min-height:20px; font-weight:550; }
+  .lock__hint { font-size:13px; color:var(--ink-3); line-height:1.5; border-top:1px solid var(--rule); padding-top:14px; }
+
+  /* ---------- masthead ---------- */
+  .mast { display:flex; flex-direction:column; gap:10px; }
+  .mast__rule { height:5px; border-radius:3px; background:linear-gradient(90deg,var(--accent) 0 62%,var(--flag) 62% 84%,var(--critical) 84% 100%); }
+  .mast__row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .mast h1 { margin:0; font-size:25px; font-weight:800; letter-spacing:-.02em; text-wrap:balance; }
+  .mast h1 span { color:var(--accent); }
+  .mast__date { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.07em; font-variant-numeric:tabular-nums; }
+
+  .sec { display:flex; flex-direction:column; gap:12px; }
+  .sec__label { display:flex; align-items:center; gap:10px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.13em; color:var(--ink-2); }
+  .sec__label::after { content:""; flex:1; height:1px; background:var(--rule); }
+  .sec__count { font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--ink-3); letter-spacing:0; }
+
+  .ticket { display:flex; background:var(--card); border:1px solid var(--rule); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); }
+  .ticket__stripe { width:6px; flex:none; background:var(--accent); }
+  .ticket--critical .ticket__stripe { background:var(--critical); }
+  .ticket--flag .ticket__stripe { background:var(--flag); }
+  .ticket__body { flex:1; padding:13px 15px 14px; min-width:0; display:flex; flex-direction:column; gap:9px; }
+  .ticket__head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .ticket__head h3 { margin:0; font-size:17px; font-weight:750; letter-spacing:-.01em; }
+  .ticket__meta { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; }
+
+  .stamp { font-family:var(--f-mono); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:3px 7px; border-radius:4px; white-space:nowrap; background:var(--accent-bg); color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 26%, transparent); }
+  .stamp--critical { background:var(--critical-bg); color:var(--critical); border-color:color-mix(in srgb, var(--critical) 30%, transparent); }
+  .stamp--flag { background:var(--flag-bg); color:var(--flag); border-color:color-mix(in srgb, var(--flag) 30%, transparent); }
+
+  .jobs { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .jobs li { border-top:1px solid var(--rule); }
+  .jobs li:first-child { border-top:none; }
+  .job { display:flex; align-items:flex-start; gap:11px; padding:9px 2px; cursor:pointer; min-height:44px; }
+  .job input { appearance:none; -webkit-appearance:none; flex:none; width:22px; height:22px; margin:1px 0 0; border:2px solid var(--ink-3); border-radius:5px; background:transparent; cursor:pointer; position:relative; transition:background .12s ease, border-color .12s ease; }
+  .job input:checked { background:var(--accent); border-color:var(--accent); }
+  .job input:checked::after { content:""; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
+  .job input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .job__text { flex:1; min-width:0; }
+  .job__title { display:block; font-weight:500; }
+  .job__note { display:block; font-size:14px; color:var(--ink-2); margin-top:2px; }
+  .job input:checked ~ .job__text .job__title { text-decoration:line-through; color:var(--ink-3); }
+
+  .q { background:var(--card); border:1px solid var(--rule); border-left:6px solid var(--flag); border-radius:10px; padding:13px 15px; display:flex; flex-direction:column; gap:5px; box-shadow:var(--shadow); }
+  .q strong { font-size:16px; font-weight:700; }
+  .q p { margin:0; font-size:14.5px; color:var(--ink-2); }
+
+  .status { border:1px solid var(--rule); border-radius:10px; background:var(--card); overflow:hidden; box-shadow:var(--shadow); }
+  .status__row { display:flex; align-items:flex-start; gap:11px; padding:11px 15px; border-top:1px solid var(--rule); font-size:14.5px; }
+  .status__row:first-child { border-top:none; }
+  .status__dot { flex:none; width:9px; height:9px; border-radius:50%; margin-top:7px; }
+  .status__dot--on { background:var(--accent); }
+  .status__dot--off { background:var(--flag); }
+  .status__row b { font-weight:650; }
+  .status__row span { color:var(--ink-2); }
+
+  .note { font-size:13.5px; color:var(--ink-2); line-height:1.55; padding:12px 14px; border:1px dashed var(--rule); border-radius:9px; }
+  .note b { color:var(--ink); font-weight:650; }
+
+  footer { font-family:var(--f-mono); font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.07em; text-align:center; padding-top:6px; border-top:1px solid var(--rule); display:flex; flex-direction:column; gap:8px; }
+  .lockbtn { background:none; border:none; color:var(--ink-3); font-family:var(--f-mono); font-size:11px; text-transform:uppercase; letter-spacing:.07em; cursor:pointer; padding:4px; }
+  .lockbtn:hover { color:var(--critical); }
+
+  @media (max-width:420px) { body { font-size:16px; } .mast h1 { font-size:22px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <svg class="lock__mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 2 5 20h14L12 2Z" fill="currentColor" style="color:var(--accent)"/>
+    <rect x="10.7" y="18" width="2.6" height="4" rx="1" fill="currentColor" style="color:var(--ink-3)"/>
+  </svg>
+  <div>
+    <h1>Evergreen Dispatch</h1>
+    <p>This board is encrypted. Enter your passphrase to unlock it — this device will remember it.</p>
+  </div>
+  <form class="lock__form" id="lockForm">
+    <input id="pin" type="password" inputmode="text" autocomplete="current-password"
+           placeholder="xxxx-xxxx-xxxx" spellcheck="false" autocapitalize="characters" aria-label="Passphrase">
+    <button class="btn" id="unlockBtn" type="submit">Unlock</button>
+    <div class="lock__err" id="err" role="alert"></div>
+  </form>
+  <p class="lock__hint">
+    Your passphrase never leaves this device and was never committed to the repo.
+    It's in <code>private/passphrase.txt</code> on your PC.
+  </p>
+</div>
+
+<div class="wrap" id="app" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var PASS_KEY = "evergreen-pass";
+  var CHECK_KEY = "evergreen-checks";
+
+  var lock = document.getElementById("lock");
+  var app = document.getElementById("app");
+  var form = document.getElementById("lockForm");
+  var pin = document.getElementById("pin");
+  var err = document.getElementById("err");
+  var btn = document.getElementById("unlockBtn");
+
+  var bundle = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function b64ToBytes(b64) {
+    var bin = atob(b64);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) { out[i] = bin.charCodeAt(i); }
+    return out;
+  }
+
+  async function decrypt(passphrase, data) {
+    var material = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]
+    );
+    var key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: b64ToBytes(data.salt), iterations: data.iterations, hash: "SHA-256" },
+      material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
+    );
+    var plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: b64ToBytes(data.iv) }, key, b64ToBytes(data.ct)
+    );
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+
+  /* ---------- rendering ---------- */
+
+  function jobHTML(job) {
+    return '<li><label class="job">' +
+      '<input type="checkbox" data-job="' + esc(job.id) + '">' +
+      '<span class="job__text"><span class="job__title">' + esc(job.title) + "</span>" +
+      (job.note ? '<span class="job__note">' + esc(job.note) + "</span>" : "") +
+      "</span></label></li>";
+  }
+
+  function ticketHTML(t) {
+    var cls = "ticket" + (t.tone === "critical" ? " ticket--critical" : t.tone === "flag" ? " ticket--flag" : "");
+    var badge = "";
+    if (t.stamp) {
+      var stampCls = "stamp" + (t.stamp.tone === "critical" ? " stamp--critical" : t.stamp.tone === "flag" ? " stamp--flag" : "");
+      badge = '<span class="' + stampCls + '">' + esc(t.stamp.text) + "</span>";
+    } else if (t.meta) {
+      badge = '<span class="ticket__meta">' + esc(t.meta) + "</span>";
+    }
+    return '<article class="' + cls + '"><div class="ticket__stripe"></div><div class="ticket__body">' +
+      '<div class="ticket__head"><h3>' + esc(t.client) + "</h3>" + badge + "</div>" +
+      '<ul class="jobs">' + (t.jobs || []).map(jobHTML).join("") + "</ul>" +
+      "</div></article>";
+  }
+
+  function render(d) {
+    var html = '<header class="mast"><div class="mast__rule"></div><div class="mast__row">' +
+      "<h1>Evergreen <span>Dispatch</span></h1>" +
+      '<div class="mast__date">' + esc(d.dateLabel) + "</div></div></header>";
+
+    (d.sections || []).forEach(function (s) {
+      html += '<section class="sec"><div class="sec__label">' + esc(s.label) +
+        (s.count ? ' <span class="sec__count">' + esc(s.count) + "</span>" : "") + "</div>" +
+        (s.tickets || []).map(ticketHTML).join("") + "</section>";
+    });
+
+    if (d.questions && d.questions.length) {
+      html += '<section class="sec"><div class="sec__label">Needs your call <span class="sec__count">' +
+        d.questions.length + "</span></div>" +
+        d.questions.map(function (q) {
+          return '<div class="q"><strong>' + esc(q.q) + "</strong><p>" + esc(q.note) + "</p></div>";
+        }).join("") + "</section>";
+    }
+
+    if (d.system && d.system.length) {
+      html += '<section class="sec"><div class="sec__label">System</div><div class="status">' +
+        d.system.map(function (r) {
+          return '<div class="status__row"><span class="status__dot status__dot--' +
+            (r.state === "on" ? "on" : "off") + '"></span><div><b>' + esc(r.name) +
+            "</b> — <span>" + esc(r.note) + "</span></div></div>";
+        }).join("") + "</div>" +
+        '<p class="note"><b>Ticking a box here is your own scratch mark.</b> It saves on this device, ' +
+        "but does <b>not</b> write back to Pocket yet — to actually close a job, say it into Pocket.</p></section>";
+    }
+
+    html += '<footer><span>Evergreen Lawn Care · Ocala &amp; Citrus Hills</span>' +
+      '<button class="lockbtn" id="forget" type="button">Forget passphrase on this device</button></footer>';
+
+    app.innerHTML = html;
+    app.hidden = false;
+    lock.hidden = true;
+    wireChecks();
+
+    document.getElementById("forget").addEventListener("click", function () {
+      try { localStorage.removeItem(PASS_KEY); } catch (e) {}
+      location.reload();
+    });
+  }
+
+  function wireChecks() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(CHECK_KEY) || "{}"); } catch (e) {}
+    var boxes = app.querySelectorAll('.job input[type="checkbox"]');
+    boxes.forEach(function (b) {
+      if (saved[b.dataset.job]) { b.checked = true; }
+      b.addEventListener("change", function () {
+        var out = {};
+        boxes.forEach(function (x) { if (x.checked) { out[x.dataset.job] = 1; } });
+        try { localStorage.setItem(CHECK_KEY, JSON.stringify(out)); } catch (e) {}
+      });
+    });
+  }
+
+  /* ---------- boot ---------- */
+
+  async function attempt(passphrase, remember) {
+    var data = await decrypt(passphrase, bundle);
+    if (remember) { try { localStorage.setItem(PASS_KEY, passphrase); } catch (e) {} }
+    render(data);
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var value = pin.value.trim();
+    if (!value) { return; }
+    btn.disabled = true;
+    err.textContent = "";
+    try {
+      await attempt(value, true);
+    } catch (ex) {
+      err.textContent = "That passphrase didn't work. Check for a typo — it's case-insensitive on the dashes, not the letters.";
+      btn.disabled = false;
+      pin.select();
+    }
+  });
+
+  (async function boot() {
+    if (!window.isSecureContext || !crypto.subtle) {
+      err.textContent = "This page needs HTTPS to decrypt. Open the https:// version.";
+      btn.disabled = true;
+      return;
+    }
+    try {
+      var res = await fetch("data.enc.json", { cache: "no-store" });
+      if (!res.ok) { throw new Error("HTTP " + res.status); }
+      bundle = await res.json();
+    } catch (ex) {
+      err.textContent = "Couldn't load the board data (" + ex.message + ").";
+      btn.disabled = true;
+      return;
+    }
+    var stored = null;
+    try { stored = localStorage.getItem(PASS_KEY); } catch (e) {}
+    if (stored) {
+      try { await attempt(stored, false); return; } catch (ex) {
+        try { localStorage.removeItem(PASS_KEY); } catch (e2) {}
+      }
+    }
+    pin.focus();
+  })();
+})();
+</script>
+</body>
+</html>

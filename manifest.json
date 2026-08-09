@@ -1,0 +1,15 @@
+{
+  "name": "Evergreen Dispatch",
+  "short_name": "Dispatch",
+  "description": "Daily work board for Evergreen Lawn Care.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F3EE",
+  "theme_color": "#1E6B3C",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
