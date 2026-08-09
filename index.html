@@ -192,17 +192,17 @@
   </svg>
   <div>
     <h1>Evergreen Dispatch</h1>
-    <p>This board is encrypted. Enter your passphrase to unlock it — this device will remember it.</p>
+    <p id="lockMsg">Enter your PIN.</p>
   </div>
   <form class="lock__form" id="lockForm">
-    <input id="pin" type="password" inputmode="text" autocomplete="current-password"
-           placeholder="xxxx-xxxx-xxxx" spellcheck="false" autocapitalize="characters" aria-label="Passphrase">
+    <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password"
+           placeholder="••••" spellcheck="false" aria-label="PIN">
     <button class="btn" id="unlockBtn" type="submit">Unlock</button>
     <div class="lock__err" id="err" role="alert"></div>
   </form>
-  <p class="lock__hint">
-    Your passphrase never leaves this device and was never committed to the repo.
-    It's in <code>private/passphrase.txt</code> on your PC.
+  <p class="lock__hint" id="lockHint">
+    Your PIN alone can't open this board — it's only half the key. The other half
+    is stored on this device and never leaves it.
   </p>
 </div>
 
@@ -213,9 +213,26 @@
   "use strict";
 
   var PASS_KEY = "evergreen-pass";
+  var DEVKEY_KEY = "evergreen-devicekey";
   var CHECK_KEY = "evergreen-checks";
   var WX_KEY = "evergreen-wx";
   var LAT = 29.1872, LON = -82.1401;      // Ocala, FL
+  var REFRESH_MS = 60000;                 // re-check the board every minute
+
+  // Half the key lives on the device, never in the repo and never typed. It
+  // arrives once via the setup link's URL fragment (#k=…), which browsers never
+  // send to the server. Without it the published ciphertext can't be attacked
+  // by guessing a 4-digit PIN.
+  function captureDeviceKey() {
+    var m = /[#&]k=([0-9a-f]{24,})/i.exec(location.hash || "");
+    if (m) {
+      try { localStorage.setItem(DEVKEY_KEY, m[1].toLowerCase()); } catch (e) {}
+      // Strip it from the address bar so it isn't shoulder-surfed or shared by
+      // copying the URL.
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    try { return localStorage.getItem(DEVKEY_KEY); } catch (e) { return null; }
+  }
 
   var lock = document.getElementById("lock");
   var app = document.getElementById("app");
@@ -434,7 +451,7 @@
     }
 
     html += '<footer><span>Evergreen Lawn Care · Ocala &amp; Citrus Hills</span>' +
-      '<button class="lockbtn" id="forget" type="button">Forget passphrase on this device</button></footer>';
+      '<button class="lockbtn" id="forget" type="button">Lock this device</button></footer>';
 
     app.innerHTML = html;
     app.hidden = false;
@@ -525,13 +542,61 @@
 
   /* ================= BOOT ================= */
 
-  async function attempt(passphrase, remember) {
-    board = await decrypt(passphrase, bundle);
-    if (remember) { try { localStorage.setItem(PASS_KEY, passphrase); } catch (e) {} }
-    var w = await loadWeather();
-    var analysed = w ? analyseWeather(w.data) : null;
-    render(board, analysed, w ? w.ageMin : 0);
+  var deviceKey = null;
+  var currentPin = null;
+  var wxTicks = 0;
+
+  async function fetchBundle() {
+    var res = await fetch("data.enc.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
   }
+
+  async function show(pinValue, weather) {
+    board = await decrypt(pinValue + ":" + deviceKey, bundle);
+    var y = window.scrollY;
+    render(board, weather.analysed, weather.ageMin);
+    window.scrollTo(0, y);
+  }
+
+  async function attempt(pinValue, remember) {
+    // Throws if the PIN is wrong — AES-GCM fails closed, so a bad guess never
+    // yields readable output.
+    var probe = await decrypt(pinValue + ":" + deviceKey, bundle);
+    board = probe;
+    currentPin = pinValue;
+    if (remember) { try { localStorage.setItem(PASS_KEY, pinValue); } catch (e) {} }
+    var w = await loadWeather();
+    render(board, w ? analyseWeather(w.data) : null, w ? w.ageMin : 0);
+    startRefresh();
+  }
+
+  // Re-check for a fresh board once a minute, so a command spoken into Pocket
+  // shows up here without pulling to refresh. Only re-renders when the build
+  // stamp actually changed, and holds scroll position when it does.
+  function startRefresh() {
+    if (startRefresh.timer) return;
+    startRefresh.timer = setInterval(async function () {
+      if (document.hidden || !currentPin) return;
+      try {
+        var next = await fetchBundle();
+        wxTicks++;
+        var refreshWx = wxTicks % 10 === 0;      // weather every ~10 min
+        if (next.built !== bundle.built) {
+          bundle = next;
+          try { speechSynthesis.cancel(); } catch (e) {}
+          var w = await loadWeather();
+          await show(currentPin, { analysed: w ? analyseWeather(w.data) : null, ageMin: w ? w.ageMin : 0 });
+        } else if (refreshWx) {
+          var w2 = await loadWeather();
+          await show(currentPin, { analysed: w2 ? analyseWeather(w2.data) : null, ageMin: w2 ? w2.ageMin : 0 });
+        }
+      } catch (e) { /* offline in a dead zone — try again next minute */ }
+    }, REFRESH_MS);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && currentPin) { wxTicks = 9; }   // force a weather pull on return
+  });
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -540,7 +605,7 @@
     btn.disabled = true; err.textContent = "";
     try { await attempt(value, true); }
     catch (ex) {
-      err.textContent = "That passphrase didn't work. Check for a typo.";
+      err.textContent = "That PIN didn't work.";
       btn.disabled = false; pin.select();
     }
   });
@@ -550,14 +615,25 @@
       err.textContent = "This page needs HTTPS to decrypt. Open the https:// version.";
       btn.disabled = true; return;
     }
-    try {
-      var res = await fetch("data.enc.json", { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      bundle = await res.json();
-    } catch (ex) {
+
+    deviceKey = captureDeviceKey();
+    if (!deviceKey) {
+      document.getElementById("lockMsg").textContent =
+        "This device isn't set up yet.";
+      document.getElementById("lockHint").innerHTML =
+        "Your PIN is only half the key — the other half has to be installed on this " +
+        "device once, from your setup link. It's in <code>private/setup-link.txt</code> " +
+        "on your PC. Open that link here, then the PIN works from then on.";
+      pin.disabled = true; btn.disabled = true;
+      return;
+    }
+
+    try { bundle = await fetchBundle(); }
+    catch (ex) {
       err.textContent = "Couldn't load the board data (" + ex.message + ").";
       btn.disabled = true; return;
     }
+
     var stored = null;
     try { stored = localStorage.getItem(PASS_KEY); } catch (e) {}
     if (stored) {
