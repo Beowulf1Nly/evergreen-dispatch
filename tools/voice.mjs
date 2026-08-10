@@ -24,26 +24,40 @@ const BOARD = join(ROOT, "private", "board.json");
 const OUT = join(ROOT, "brief.mp3");
 const META = join(ROOT, "brief.json");
 
-// Same order the app reads the board in, so the audio matches the screen.
+// THE SHORT BRIEF ONLY — deliberately.
+//
+// The free tier is 10,000 characters a MONTH. The full rundown runs ~2,100
+// characters, so rendering that would buy four briefs and then silence. This
+// renders the headline instead (~300 chars): the one thing that matters, the
+// count of what's behind it, and what needs deciding. The full walk-through is
+// spoken by the browser, which is free and unlimited.
 function scriptFrom(board) {
-  const parts = [];
   const h = new Date().getHours();
-  parts.push((h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening") + ", Hunter.");
-  if (board.assessment) parts.push(board.assessment);
+  const parts = [(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening") + ", Hunter."];
 
-  const groups = { overdue: "Overdue.", today: "Today." };
-  for (const when of ["overdue", "today"]) {
-    const qs = (board.quests || []).filter((q) => q.when === when);
-    if (!qs.length) continue;
-    parts.push(groups[when] + " " + qs.map((q) =>
-      q.giver + ": " + q.objectives.map((o) => o.title).join(", ")).join(". ") + ".");
+  const quests = board.quests || [];
+  const overdue = quests.filter((q) => q.when === "overdue");
+  const today = quests.filter((q) => q.when === "today");
+
+  // Lead with the single highest-consequence thing, not a list.
+  const lead = overdue.find((q) => q.tone === "critical")
+    || today.find((q) => q.tone === "critical")
+    || overdue[0] || today[0];
+
+  if (lead) {
+    const first = lead.objectives.find((o) => o) || {};
+    parts.push(`First: ${lead.giver}. ${first.title}.`);
   }
+
+  const counts = [];
+  if (overdue.length) counts.push(`${overdue.length} overdue`);
+  if (today.length) counts.push(`${today.length} due today`);
+  if (counts.length) parts.push(`You have ${counts.join(" and ")}.`);
 
   const qn = (board.questions || []).length;
-  if (qn) {
-    parts.push(`${qn} ${qn === 1 ? "thing needs" : "things need"} your call. ` +
-      board.questions.map((q) => q.q).join(" "));
-  }
+  if (qn) parts.push(`${qn} ${qn === 1 ? "thing needs" : "things need"} your call.`);
+
+  parts.push("Tap full rundown for the rest.");
   return parts.join(" ");
 }
 
@@ -128,23 +142,31 @@ async function main() {
   // characters and the ElevenLabs free tier is 10,000 a MONTH. Rendering on
   // every publish would exhaust it in a single day. So: only re-render when the
   // words actually changed, and never more than BUDGET_PER_DAY times daily.
-  const BUDGET_PER_DAY = 4;
+  const BUDGET_PER_DAY = 6;        // generous — the real ceiling is monthly
+  const MONTHLY_CHARS = 9200;      // headroom under the 10,000 free tier
   const LEDGER = join(ROOT, "private", ".voice-ledger.json");
   const scriptHash = createHash("sha256").update(text).digest("hex").slice(0, 16);
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const month = today.slice(0, 7);
 
-  let ledger = { day: today, spent: 0, hash: "", chars: 0 };
+  let ledger = { month, day: today, spent: 0, hash: "", chars: 0, monthChars: 0 };
   if (existsSync(LEDGER)) {
-    try { ledger = JSON.parse(await readFile(LEDGER, "utf8")); } catch {}
+    try { ledger = { ...ledger, ...JSON.parse(await readFile(LEDGER, "utf8")) }; } catch {}
   }
-  if (ledger.day !== today) ledger = { day: today, spent: 0, hash: ledger.hash, chars: 0 };
+  if (ledger.month !== month) { ledger.month = month; ledger.monthChars = 0; }
+  if (ledger.day !== today) { ledger.day = today; ledger.spent = 0; }
 
   if (ledger.hash === scriptHash && existsSync(OUT)) {
     console.log("  Voice: brief unchanged — keeping the existing audio (0 characters spent).");
     return;
   }
+  if (ledger.monthChars + text.length > MONTHLY_CHARS) {
+    console.log(`  Voice: monthly budget spent (${ledger.monthChars}/${MONTHLY_CHARS} chars) — keeping the existing audio.`);
+    return;
+  }
   if (ledger.spent >= BUDGET_PER_DAY) {
-    console.log(`  Voice: daily render budget reached (${ledger.spent}/${BUDGET_PER_DAY}) — keeping the existing audio.`);
+    console.log(`  Voice: daily render cap reached (${ledger.spent}/${BUDGET_PER_DAY}) — keeping the existing audio.`);
     return;
   }
 
@@ -165,11 +187,16 @@ async function main() {
     provider, chars: text.length, built: new Date().toISOString(),
   }, null, 2) + "\n", "utf8");
 
-  ledger = { day: today, spent: ledger.spent + 1, hash: scriptHash, chars: (ledger.chars || 0) + text.length };
+  ledger = {
+    month, day: today,
+    spent: ledger.spent + 1,
+    hash: scriptHash,
+    monthChars: (ledger.monthChars || 0) + text.length,
+  };
   await writeFile(LEDGER, JSON.stringify(ledger, null, 2) + "\n", "utf8");
 
   console.log(`  Voice: ${(audio.length / 1024).toFixed(0)} KB via ${provider} -> brief.mp3`);
-  console.log(`         ${text.length} characters · render ${ledger.spent}/${BUDGET_PER_DAY} today`);
+  console.log(`         ${text.length} chars · ${ledger.monthChars}/${MONTHLY_CHARS} used this month`);
 }
 
 main().catch((e) => { console.log("  Voice: " + e.message); });

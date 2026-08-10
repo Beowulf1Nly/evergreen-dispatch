@@ -200,6 +200,10 @@
   .assessment { font-size:18.5px; line-height:1.5; font-weight:500; text-wrap:pretty; padding-left:14px; border-left:3px solid var(--accent); }
   .speak { display:flex; align-items:center; justify-content:center; gap:10px; font-family:var(--f-ui); font-size:16px; font-weight:650; min-height:54px; width:100%; padding:14px 18px; border:1.5px solid var(--accent); border-radius:11px; background:var(--accent-bg); color:var(--accent); cursor:pointer; }
   .speak[data-on="1"] { background:var(--accent); color:#fff; }
+  .speakrow { display:flex; gap:8px; }
+  .speakrow .speak { flex:1 1 0; min-width:0; font-size:15px; padding:14px 10px; }
+  .speak--alt { border-color:var(--rule); background:var(--card); color:var(--ink-2); }
+  .speak--alt[data-on="1"] { background:var(--ink); border-color:var(--ink); color:var(--paper); }
   .speak svg { width:19px; height:19px; flex:none; }
 
   /* ---------- weather ---------- */
@@ -401,7 +405,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "91b364576997"; /* @@VERSION@@ */
+  var APP_VERSION = "1fe58d1221ce"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -863,10 +867,15 @@
     // thing above the tabs that isn't one line — it's the reason he opened it.
     if (d.assessment) {
       html += '<div class="read"><div class="assessment">' + esc(d.assessment) + "</div>" +
+        '<div class="speakrow">' +
         '<button class="speak" id="speak" type="button" data-on="0">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>' +
-        '<span id="speakLabel">Brief me</span></button></div>';
+        '<span id="speakLabel">Brief me</span></button>' +
+        '<button class="speak speak--alt" id="rundown" type="button" data-on="0">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
+        '<span id="rundownLabel">Full rundown</span></button></div></div>';
     }
 
     // Weather and exposure collapse to a single line each. Open them if you
@@ -1253,7 +1262,39 @@
   }
 
   /* ============ spoken brief ============ */
+  // The headline — what the neural voice says. Matches tools/voice.mjs so the
+  // spoken and the fallback versions tell the same story.
   function briefText(d) {
+    var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; })
+      .filter(function (q) { return !questState(q).complete; });
+    var overdue = quests.filter(function (q) { return q.when === "overdue"; });
+    var today = quests.filter(function (q) { return q.when === "today"; });
+    var lead = overdue.filter(function (q) { return q.tone === "critical"; })[0]
+      || today.filter(function (q) { return q.tone === "critical"; })[0]
+      || overdue[0] || today[0];
+
+    var parts = [greeting()];
+    if (lead) {
+      var st = questState(lead);
+      var first = st.objs.filter(function (o) { return !isDone(o.id); })[0];
+      parts.push("First: " + lead.giver + ". " + (first ? objTitle(first) : "") + ".");
+    }
+    var counts = [];
+    if (overdue.length) counts.push(overdue.length + " overdue");
+    if (today.length) counts.push(today.length + " due today");
+    if (counts.length) parts.push("You have " + counts.join(" and ") + ".");
+    var a = lastWeather.analysed;
+    if (a) {
+      var l = weatherLines(a)[0];
+      parts.push(l.head === "Mow window" ? "Mow window " + l.body.split("—")[0].trim() + "." : l.body);
+    }
+    var qn = (d.questions || []).length;
+    if (qn) parts.push(qn + (qn === 1 ? " thing needs" : " things need") + " your call.");
+    return parts.join(" ");
+  }
+
+  // Everything, in board order. Browser-spoken, so length costs nothing.
+  function rundownText(d) {
     var parts = [d.dateLabel + "."];
     if (d.assessment) parts.push(d.assessment);
     var a = lastWeather.analysed;
@@ -1265,10 +1306,12 @@
     var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
     var open = quests.filter(function (q) { return !questState(q).complete; });
 
-    ["overdue", "today"].forEach(function (w) {
+    // Every group, not just today's — this is the one that walks the whole board.
+    var WHEN_SAY = { overdue: "Overdue.", today: "Today.", week: "This week.", open: "No date on these." };
+    ["overdue", "today", "week", "open"].forEach(function (w) {
       var g = open.filter(function (q) { return q.when === w; });
       if (!g.length) return;
-      parts.push((w === "overdue" ? "Overdue." : "Today.") + " " + g.map(function (q) {
+      parts.push(WHEN_SAY[w] + " " + g.map(function (q) {
         var remaining = questState(q).objs.filter(function (o) { return !isDone(o.id); }).map(objTitle);
         return q.giver + ": " + remaining.join(", ");
       }).join(". ") + ".");
@@ -1315,6 +1358,20 @@
       audio = null;
       speakSequence(briefText(d), reset);
     });
+
+    // Full rundown — everything, spoken by the browser. Free and unlimited, which
+    // is why the neural voice is spent on the headline instead of this.
+    var rb = document.getElementById("rundown");
+    if (rb) {
+      var rl = document.getElementById("rundownLabel");
+      function rReset() { rb.dataset.on = "0"; rl.textContent = "Full rundown"; }
+      rb.addEventListener("click", function () {
+        if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; reset(); }
+        if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); rReset(); reset(); return; }
+        rb.dataset.on = "1"; rl.textContent = "Stop";
+        speakSequence(rundownText(d), rReset);
+      });
+    }
   }
 
   /* ============ self-update ============ */
