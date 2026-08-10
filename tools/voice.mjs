@@ -46,10 +46,13 @@ function scriptFrom(board) {
   return parts.join(" ");
 }
 
-// Hunter's pick from the ElevenLabs voice library (2026-08-10). A voice id is
-// public, not a secret — only the API key is. Override without editing code by
-// putting a different id in private/tts-voice.txt.
-const DEFAULT_VOICE = "yj30vwTGJxSHezdAGsv9";
+// "Daniel" — British, deep, news-presenter. A *premade* voice, which matters:
+// ElevenLabs blocks free accounts from using voice-LIBRARY voices over the API
+// (402 paid_plan_required), and Hunter's first pick (yj30vwTGJxSHezdAGsv9) is a
+// library voice. Premade voices work on the free tier. Restore his pick here if
+// he ever upgrades. A voice id is public config, not a secret — only the key is.
+// Override without touching code via private/tts-voice.txt.
+const DEFAULT_VOICE = "onwK4e9ZLuTAKqWW03F9";
 
 async function elevenlabs(key, text) {
   const VOICE_FILE = join(ROOT, "private", "tts-voice.txt");
