@@ -347,7 +347,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "4b6268db9e49"; /* @@VERSION@@ */
+  var APP_VERSION = "3c204a62db70"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -439,6 +439,7 @@
 
   var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false, tab: "Today" };
   if (!prefs.tab) prefs.tab = "Today";
+  if (typeof prefs.stayUnlocked !== "boolean") prefs.stayUnlocked = false;   // ask for the PIN by default
   function savePrefs() { save(PREFS_KEY, prefs); }
   var activeTab = prefs.tab;
 
@@ -792,6 +793,11 @@
       '<div class="field"><label for="voiceSel">Briefing voice</label>' +
       '<select id="voiceSel"></select><p id="voiceHint">Checking what this device has installed…</p></div>' +
 
+      '<div class="field"><label>Lock</label>' +
+      '<button class="tool" id="tStayUnlocked" type="button" aria-pressed="' + (prefs.stayUnlocked ? "true" : "false") + '">' +
+      (prefs.stayUnlocked ? "Staying unlocked — tap to require the PIN" : "Asking for the PIN every time") + "</button>" +
+      '<p>Off by default, so the board asks for your PIN each time you open it.</p></div>' +
+
       (d.system && d.system.length ? '<div class="field"><label>Status</label><div class="status">' +
         d.system.map(function (r) {
           return '<div class="status__row"><span class="status__dot status__dot--' + (r.state === "on" ? "on" : "off") +
@@ -939,6 +945,22 @@
     }
     if (addBtn) addBtn.addEventListener("click", addQuest);
     if (newQ) newQ.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addQuest(); } });
+
+    var stay = document.getElementById("tStayUnlocked");
+    if (stay) stay.addEventListener("click", function () {
+      prefs.stayUnlocked = !prefs.stayUnlocked;
+      savePrefs();
+      if (prefs.stayUnlocked) {
+        if (currentPin) { try { localStorage.setItem(PASS_KEY, currentPin); } catch (e) {} }
+      } else {
+        try { localStorage.removeItem(PASS_KEY); } catch (e) {}
+      }
+      stay.setAttribute("aria-pressed", prefs.stayUnlocked ? "true" : "false");
+      stay.textContent = prefs.stayUnlocked
+        ? "Staying unlocked — tap to require the PIN"
+        : "Asking for the PIN every time";
+      toast(prefs.stayUnlocked ? "Won't ask for the PIN on this device" : "Will ask for the PIN each time");
+    });
 
     var reset = document.getElementById("resetEdits");
     if (reset) reset.addEventListener("click", function () {
@@ -1169,7 +1191,7 @@
     var value = pin.value.trim();
     if (!value) return;
     btn.disabled = true; err.textContent = "";
-    try { await attempt(value, true); }
+    try { await attempt(value, prefs.stayUnlocked); }
     catch (ex) { err.textContent = "That PIN didn't work."; btn.disabled = false; pin.select(); }
   });
 
@@ -1207,11 +1229,17 @@
       return;
     }
 
-    var stored = null;
-    try { stored = localStorage.getItem(PASS_KEY); } catch (e) {}
-    if (stored) {
-      try { await attempt(stored, false); return; }
-      catch (ex) { try { localStorage.removeItem(PASS_KEY); } catch (e2) {} }
+    // The PIN is only skipped if he explicitly asked for it to be. A lock that
+    // never asks isn't a lock — and he noticed.
+    if (prefs.stayUnlocked) {
+      var stored = null;
+      try { stored = localStorage.getItem(PASS_KEY); } catch (e) {}
+      if (stored) {
+        try { await attempt(stored, false); return; }
+        catch (ex) { try { localStorage.removeItem(PASS_KEY); } catch (e2) {} }
+      }
+    } else {
+      try { localStorage.removeItem(PASS_KEY); } catch (e) {}
     }
     pin.focus();
   })();
