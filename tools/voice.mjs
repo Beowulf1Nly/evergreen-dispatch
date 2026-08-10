@@ -46,9 +46,16 @@ function scriptFrom(board) {
   return parts.join(" ");
 }
 
+// Hunter's pick from the ElevenLabs voice library (2026-08-10). A voice id is
+// public, not a secret — only the API key is. Override without editing code by
+// putting a different id in private/tts-voice.txt.
+const DEFAULT_VOICE = "yj30vwTGJxSHezdAGsv9";
+
 async function elevenlabs(key, text) {
-  // Adam — the closest stock voice to what he's after. Swap the id to retune.
-  const VOICE = "pNInz6obpgDQGcFmaJgB";
+  const VOICE_FILE = join(ROOT, "private", "tts-voice.txt");
+  const VOICE = existsSync(VOICE_FILE)
+    ? (await readFile(VOICE_FILE, "utf8")).trim() || DEFAULT_VOICE
+    : DEFAULT_VOICE;
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE}`, {
     method: "POST",
     headers: { "xi-api-key": key, "Content-Type": "application/json" },
@@ -58,7 +65,13 @@ async function elevenlabs(key, text) {
       voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true },
     }),
   });
-  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 300);
+    if (res.status === 401) throw new Error("ElevenLabs rejected the key (401). Check private/tts-key.txt holds your API key, not a voice id.");
+    if (res.status === 404) throw new Error(`ElevenLabs doesn't recognise voice ${VOICE} (404). If it's a library voice, add it to your account first.`);
+    if (res.status === 429) throw new Error("ElevenLabs quota exhausted (429) — the board still published, just without new audio.");
+    throw new Error(`ElevenLabs ${res.status}: ${body}`);
+  }
   return Buffer.from(await res.arrayBuffer());
 }
 
