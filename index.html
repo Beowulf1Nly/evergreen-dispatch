@@ -131,7 +131,18 @@
     display:flex; align-items:center; gap:10px; font-size:14.5px; color:var(--ink);
   }
   .strip > summary::-webkit-details-marker { display:none; }
-  .strip > summary::after { content:"⌄"; margin-left:auto; color:var(--ink-3); font-size:15px; line-height:1; }
+  .strip > summary::after { content:"⌄"; margin-left:auto; color:var(--ink-3); font-size:15px; line-height:1; order:3; }
+  .strip__txt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .playbtn {
+    flex:none; order:2; width:36px; height:36px; margin:-4px 2px -4px 0;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--accent); border-radius:50%; background:var(--accent-bg);
+    color:var(--accent); cursor:pointer; padding:0;
+  }
+  .playbtn svg { width:14px; height:14px; margin-left:1px; }
+  .playbtn[data-on="1"] { background:var(--accent); color:#fff; }
+  .playbtn[data-on="1"] svg { margin-left:0; }
+  .playbtn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .strip[open] > summary::after { content:"⌃"; }
   .strip > summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; border-radius:10px; }
   .strip__dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--accent); }
@@ -427,7 +438,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "9b3c36f3f8c6"; /* @@VERSION@@ */
+  var APP_VERSION = "feff4d799dc2"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -905,7 +916,10 @@
     var wxSum = weatherSummary(a);
     html += '<details class="strip"' + (prefs.openWx ? " open" : "") + ' data-strip="wx">' +
       '<summary><span class="strip__dot' + (wxSum.tone === "bad" ? " strip__dot--bad" : wxSum.tone === "warn" ? " strip__dot--warn" : "") + '"></span>' +
-      esc(wxSum.line) + "</summary>" +
+      '<span class="strip__txt">' + esc(wxSum.line) + "</span>" +
+      '<button class="playbtn" id="wxPlay" type="button" aria-label="Read the weather out loud">' +
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>' +
+      "</summary>" +
       '<div class="strip__body">' + weatherHTML(a, ageMin) + "</div></details>";
 
     // Facts, not prose. The assessment above already tells the story — repeating
@@ -1038,6 +1052,19 @@
     if (fresh) fresh.addEventListener("click", function () {
       toast("Checking…");
       pullNow(true);
+    });
+
+    // Weather read-aloud. Sits inside the strip's summary, so it must not also
+    // open or close the strip.
+    var wxp = document.getElementById("wxPlay");
+    if (wxp) wxp.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (speaking || speechSynthesis.speaking || speechSynthesis.pending) {
+        stopSpeaking(); wxp.dataset.on = "0"; return;
+      }
+      wxp.dataset.on = "1";
+      speakSequence(weatherText(), function () { wxp.dataset.on = "0"; });
     });
 
     // One chip's detail open at a time — this is a glance surface, not a wall.
@@ -1323,6 +1350,57 @@
     return parts.join(" ");
   }
 
+  // Weather on its own, in plain words. Browser-spoken, so it costs nothing.
+  function weatherText() {
+    var a = lastWeather.analysed;
+    if (!a) return "No weather right now. You are offline and nothing is cached.";
+    var p = ["Weather for Ocala."];
+    p.push("Right now it's " + a.current.temp + " degrees, feels like " + a.current.feels + ".");
+    if (a.best && a.best.len >= 2) {
+      var end = new Date(Math.min(a.best.end.when.getTime() + 3600000, a.sunset.getTime()));
+      p.push("You can mow from " + hhmm(a.best.start.when) + " until " + hhmm(end) + ". Rain chance stays under forty percent.");
+    } else {
+      p.push("There's no clear mow window. Rain chance is over forty percent for most of the daylight left.");
+    }
+    if (a.wettest && a.wettest.pop >= 40) {
+      p.push("Rain builds to " + a.wettest.pop + " percent around " + hhmm(a.wettest.when) + ". Get the mowing in before that.");
+    }
+    if (a.peakFeels >= 100) {
+      p.push("Heat index peaks at " + a.peakFeels + ". " +
+        (a.peakFeels >= 108 ? "That's dangerous with exertion. Water every twenty minutes and don't put anyone out alone."
+                            : "Take water breaks."));
+    }
+    var uv = a.hours[0].uv;
+    if (uv != null && uv >= 8) p.push("UV is " + uv + ", which is very high. Cover up.");
+    if (a.hours[0].gust != null && a.hours[0].gust >= 20) p.push("Gusting to " + a.hours[0].gust + " miles an hour.");
+    p.push("Sun goes down at " + hhmm(a.sunset) + ".");
+    if (a.days && a.days[1]) {
+      p.push("Tomorrow, high of " + a.days[1].hi + ", " + a.days[1].pop + " percent rain.");
+    }
+    return p.join(" ");
+  }
+
+  // The day's work, spoken. Chained after the headline on the first brief of
+  // the day so one tap gives him the whole picture.
+  function dayText(d) {
+    var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; })
+      .filter(function (q) { return !questState(q).complete; });
+    var p = [];
+    ["overdue", "today"].forEach(function (w) {
+      var g = quests.filter(function (q) { return q.when === w; });
+      if (!g.length) return;
+      p.push(w === "overdue" ? "Carrying over." : "Then today.");
+      g.forEach(function (q) {
+        var left = questState(q).objs.filter(function (o) { return !isDone(o.id); }).map(objTitle);
+        p.push(q.giver + ". " + left.join(". ") + ".");
+      });
+    });
+    var qn = (d.questions || []).length;
+    if (qn) p.push("And " + qn + (qn === 1 ? " thing needs" : " things need") + " your call: " +
+      d.questions.map(function (q) { return q.q; }).join(" "));
+    return p.join(" ");
+  }
+
   // Everything, in board order. Browser-spoken, so length costs nothing.
   function rundownText(d) {
     var parts = [d.dateLabel + "."];
@@ -1371,22 +1449,36 @@
       if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); reset(); return; }
 
       b.dataset.on = "1"; label.textContent = "Stop";
+
+      // First brief of the day gives him the whole picture in one tap: the
+      // headline in the good voice, then weather and the day's work. Every
+      // brief after that is just the headline — he already knows the shape.
+      var today = new Date().toISOString().slice(0, 10);
+      var firstToday = prefs.lastFullBrief !== today;
+      var tail = firstToday ? weatherText() + " " + dayText(d) : "";
+      if (firstToday) { prefs.lastFullBrief = today; savePrefs(); }
+
+      function afterHeadline() {
+        if (!tail) { reset(); return; }
+        speakSequence(tail, reset);
+      }
+
       try {
         // Key the cache-bust to when the AUDIO was rendered, not when the board
-        // was published. The board republishes many times an hour and the mp3 is
-        // ~3 MB — busting on board time would re-download it constantly on cell data.
+        // was published — the board republishes many times an hour and busting
+        // on board time would re-download the mp3 constantly on cell data.
         var meta = await fetch("brief.json?t=" + Date.now(), { cache: "no-store" });
         if (meta.ok) {
           var mj = await meta.json();
           audio = new Audio("brief.mp3?v=" + encodeURIComponent(mj.built));
-          audio.onended = reset;
-          audio.onerror = function () { speakSequence(briefText(d), reset); };
+          audio.onended = afterHeadline;
+          audio.onerror = function () { speakSequence(briefText(d) + " " + tail, reset); };
           await audio.play();
           return;
         }
       } catch (e) { /* no rendered audio — use the browser voice */ }
       audio = null;
-      speakSequence(briefText(d), reset);
+      speakSequence(briefText(d) + " " + tail, reset);
     });
 
     // Full rundown — everything, spoken by the browser. Free and unlimited, which
