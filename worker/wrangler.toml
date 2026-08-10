@@ -1,0 +1,13 @@
+name = "evergreen-dispatch-sync"
+main = "sync.js"
+compatibility_date = "2026-08-01"
+
+# Created by:  wrangler kv namespace create DISPATCH
+# Paste the id it prints into `id` below.
+[[kv_namespaces]]
+binding = "DISPATCH"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+# DEVICE_KEY is a secret, not a var — never put it in this file.
+#   wrangler secret put DEVICE_KEY
+# Paste the contents of private/devicekey.txt when prompted.

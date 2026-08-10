@@ -1,0 +1,4 @@
+{
+  "url": null,
+  "_comment": "Set url to your deployed Cloudflare Worker, e.g. https://evergreen-dispatch-sync.<subdomain>.workers.dev — until then the board works exactly as before, device-local."
+}

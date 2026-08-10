@@ -512,7 +512,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "26953715588c"; /* @@VERSION@@ */
+  var APP_VERSION = "94727f2c7e39"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -614,6 +614,82 @@
   if (!Array.isArray(overlay.custom)) overlay.custom = [];
   function saveOverlay() { save(OVERLAY_KEY, overlay); }
 
+  /* ============ global sync ============
+     The board is static, so it writes through a small Cloudflare Worker instead.
+     Everything still works with the worker absent or unreachable — local stays
+     the source of truth for the session and pushes when it can. */
+  var syncUrl = null;
+  var pendingDeletes = { done: [], hidden: [], titles: [], notes: [] };
+  var syncBusy = false;
+
+  async function loadSyncConfig() {
+    try {
+      var r = await fetch("sync.json?t=" + Date.now(), { cache: "no-store" });
+      if (r.ok) syncUrl = (await r.json()).url || null;
+    } catch (e) { syncUrl = null; }
+  }
+
+  function mergeRemote(remote) {
+    if (!remote) return false;
+    var changed = false;
+    ["done", "hidden", "titles", "notes"].forEach(function (b) {
+      Object.keys(remote[b] || {}).forEach(function (id) {
+        if (overlay[b][id] !== remote[b][id]) { overlay[b][id] = remote[b][id]; changed = true; }
+      });
+      // Anything the server doesn't have that we didn't just delete locally is
+      // something another device cleared — drop it.
+      Object.keys(overlay[b]).forEach(function (id) {
+        if (!(id in (remote[b] || {})) && pendingDeletes[b].indexOf(id) < 0) {
+          delete overlay[b][id]; changed = true;
+        }
+      });
+    });
+    if (remote.order && JSON.stringify(remote.order) !== JSON.stringify(overlay.order)) {
+      overlay.order = remote.order; changed = true;
+    }
+    if (Array.isArray(remote.custom) && JSON.stringify(remote.custom) !== JSON.stringify(overlay.custom)) {
+      overlay.custom = remote.custom; changed = true;
+    }
+    if (changed) saveOverlay();
+    return changed;
+  }
+
+  async function pushSync() {
+    if (!syncUrl || !deviceKey || syncBusy) return;
+    syncBusy = true;
+    var body = {
+      done: overlay.done, hidden: overlay.hidden, titles: overlay.titles,
+      notes: overlay.notes, order: overlay.order, custom: overlay.custom,
+      updated: Date.now(),
+      _del_done: pendingDeletes.done, _del_hidden: pendingDeletes.hidden,
+      _del_titles: pendingDeletes.titles, _del_notes: pendingDeletes.notes,
+    };
+    try {
+      var r = await fetch(syncUrl + "/state", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + deviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) {
+        pendingDeletes = { done: [], hidden: [], titles: [], notes: [] };
+        var merged = await r.json();
+        if (mergeRemote(merged)) { var y = window.scrollY; redraw(); window.scrollTo(0, y); }
+      }
+    } catch (e) { /* offline — the next change or tick retries */ }
+    syncBusy = false;
+  }
+
+  async function pullSync() {
+    if (!syncUrl || !deviceKey || syncBusy || walk.on) return;
+    try {
+      var r = await fetch(syncUrl + "/state", {
+        headers: { Authorization: "Bearer " + deviceKey }, cache: "no-store",
+      });
+      if (!r.ok) return;
+      if (mergeRemote(await r.json())) { var y = window.scrollY; redraw(); window.scrollTo(0, y); }
+    } catch (e) { /* offline */ }
+  }
+
   var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false, tab: "Today" };
   if (!prefs.tab) prefs.tab = "Today";
   if (typeof prefs.stayUnlocked !== "boolean") prefs.stayUnlocked = false;   // ask for the PIN by default
@@ -643,6 +719,15 @@
     redraw();
     window.scrollTo(0, y);
     if (msg) toast(msg);
+    pushSync();          // fire and forget — local already saved
+  }
+
+  // Deleting a key has to travel as an explicit tombstone. Without it the merge
+  // sees "absent" and assumes the other device simply hasn't heard yet, so an
+  // un-tick would come straight back on the next pull.
+  function forget(bucket, id) {
+    delete overlay[bucket][id];
+    if (pendingDeletes[bucket] && pendingDeletes[bucket].indexOf(id) < 0) pendingDeletes[bucket].push(id);
   }
 
   /* ============ weather ============ */
@@ -1174,7 +1259,7 @@
         var name = (app.querySelector('[data-obj-title="' + CSS.escape(id) + '"]') || {}).textContent || "Objective";
         var nowDone = b.checked;
         commit(nowDone ? "Ticked off — " + name : "Un-ticked — " + name, function () {
-          if (nowDone) overlay.done[id] = Date.now(); else delete overlay.done[id];
+          if (nowDone) overlay.done[id] = Date.now(); else forget("done", id);
         });
       });
     });
@@ -1217,7 +1302,7 @@
         var text = el.textContent.trim();
         if (text === before) return;                       // nothing changed, stay quiet
         if (!text) {                                        // cleared it -> back to published wording
-          commit("Name reset", function () { delete overlay.titles[id]; });
+          commit("Name reset", function () { forget("titles", id); });
           return;
         }
         commit("Renamed", function () { overlay.titles[id] = text; });
@@ -1829,6 +1914,7 @@
       if (document.hidden) return;
       paintFreshness();               // keep the age honest even between pulls
       pullNow(false);
+      pullSync();                     // pick up anything ticked on another device
     }, REFRESH_MS);
   }
 
@@ -1873,6 +1959,7 @@
     try { bundle = await fetchBundle(); }
     catch (ex) { err.textContent = "Couldn't load the board data (" + ex.message + ")."; btn.disabled = true; return; }
 
+    await loadSyncConfig();
     deviceKey = captureDeviceKey();
     if (!deviceKey) {
       document.getElementById("lockMsg").textContent = "This device needs setting up first.";
