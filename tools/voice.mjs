@@ -12,7 +12,7 @@
 // It never reaches the browser and never enters the repo — the audio is
 // rendered here and only the finished MP3 is published.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -128,6 +128,49 @@ async function openai(key, text) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// Per-line clips, cached by content hash. The walkthrough reads ~65 items, but
+// almost none of them change day to day — so pay for a line once and reuse it
+// until its wording changes. Turns a 278k/month bill into the daily delta.
+async function renderClips(provider, key, board, ledger, budget) {
+  const CLIPDIR = join(ROOT, "voice");
+  const INDEX = join(ROOT, "voice", "index.json");
+  await mkdir(CLIPDIR, { recursive: true });
+
+  let index = {};
+  if (existsSync(INDEX)) { try { index = JSON.parse(await readFile(INDEX, "utf8")); } catch {} }
+
+  const want = [];
+  for (const q of board.quests || []) {
+    for (const o of q.objectives || []) {
+      const line = `${q.giver}. ${o.title}.` + (o.note ? ` ${o.note}` : "");
+      want.push({ id: o.id, line, hash: createHash("sha256").update(line).digest("hex").slice(0, 12) });
+    }
+  }
+
+  const next = {};
+  let spent = 0, made = 0, reused = 0, skipped = 0;
+  for (const w of want) {
+    next[w.id] = w.hash;
+    const file = join(CLIPDIR, w.hash + ".mp3");
+    if (existsSync(file)) { reused++; continue; }
+    if (ledger.monthChars + spent + w.line.length > budget) { skipped++; continue; }
+    try {
+      const audio = provider === "elevenlabs" ? await elevenlabs(key, w.line)
+        : provider === "azure" ? await azure(key.split(":")[0], key.split(":")[1] || "eastus", w.line)
+        : await openai(key, w.line);
+      await writeFile(file, audio);
+      spent += w.line.length; made++;
+    } catch (err) {
+      console.log(`  Voice: clip failed (${err.message}) — that line falls back to the browser.`);
+      break;
+    }
+  }
+
+  await writeFile(INDEX, JSON.stringify(next, null, 2) + "\n", "utf8");
+  console.log(`  Clips: ${made} new · ${reused} reused · ${skipped} left for the browser voice · ${spent} chars`);
+  return spent;
+}
+
 async function main() {
   if (!existsSync(KEY_FILE)) {
     console.log("  Voice: no private/tts-key.txt — using the browser voice.");
@@ -157,16 +200,21 @@ async function main() {
   if (ledger.month !== month) { ledger.month = month; ledger.monthChars = 0; }
   if (ledger.day !== today) { ledger.day = today; ledger.spent = 0; }
 
-  if (ledger.hash === scriptHash && existsSync(OUT)) {
-    console.log("  Voice: brief unchanged — keeping the existing audio (0 characters spent).");
-    return;
-  }
-  if (ledger.monthChars + text.length > MONTHLY_CHARS) {
-    console.log(`  Voice: monthly budget spent (${ledger.monthChars}/${MONTHLY_CHARS} chars) — keeping the existing audio.`);
-    return;
-  }
-  if (ledger.spent >= BUDGET_PER_DAY) {
-    console.log(`  Voice: daily render cap reached (${ledger.spent}/${BUDGET_PER_DAY}) — keeping the existing audio.`);
+  // Decide about the headline, but never return early — the walkthrough clips
+  // must still get their turn at whatever budget is left.
+  const keyArg = rest.join(":");
+  let skipHeadline = null;
+  if (ledger.hash === scriptHash && existsSync(OUT)) skipHeadline = "brief unchanged";
+  else if (ledger.monthChars + text.length > MONTHLY_CHARS) skipHeadline = `monthly budget spent (${ledger.monthChars}/${MONTHLY_CHARS})`;
+  else if (ledger.spent >= BUDGET_PER_DAY) skipHeadline = `daily cap reached (${ledger.spent}/${BUDGET_PER_DAY})`;
+
+  if (skipHeadline) {
+    console.log(`  Voice: ${skipHeadline} — keeping the existing headline.`);
+    const clipSpend = await renderClips(provider, keyArg, board, ledger, MONTHLY_CHARS);
+    if (clipSpend) {
+      ledger.monthChars += clipSpend;
+      await writeFile(LEDGER, JSON.stringify(ledger, null, 2) + "\n", "utf8");
+    }
     return;
   }
 
@@ -193,6 +241,11 @@ async function main() {
     hash: scriptHash,
     monthChars: (ledger.monthChars || 0) + text.length,
   };
+
+  // Then the per-line clips for the walkthrough, whatever budget is left.
+  const clipSpend = await renderClips(provider, keyArg, board, ledger, MONTHLY_CHARS);
+  ledger.monthChars += clipSpend;
+
   await writeFile(LEDGER, JSON.stringify(ledger, null, 2) + "\n", "utf8");
 
   console.log(`  Voice: ${(audio.length / 1024).toFixed(0)} KB via ${provider} -> brief.mp3`);
