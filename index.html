@@ -401,7 +401,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "a297d34d58db"; /* @@VERSION@@ */
+  var APP_VERSION = "91b364576997"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -1299,9 +1299,13 @@
 
       b.dataset.on = "1"; label.textContent = "Stop";
       try {
-        var head = await fetch("brief.mp3", { method: "HEAD", cache: "no-store" });
-        if (head.ok) {
-          audio = new Audio("brief.mp3?t=" + encodeURIComponent(bundle.built));
+        // Key the cache-bust to when the AUDIO was rendered, not when the board
+        // was published. The board republishes many times an hour and the mp3 is
+        // ~3 MB — busting on board time would re-download it constantly on cell data.
+        var meta = await fetch("brief.json?t=" + Date.now(), { cache: "no-store" });
+        if (meta.ok) {
+          var mj = await meta.json();
+          audio = new Audio("brief.mp3?v=" + encodeURIComponent(mj.built));
           audio.onended = reset;
           audio.onerror = function () { speakSequence(briefText(d), reset); };
           await audio.play();

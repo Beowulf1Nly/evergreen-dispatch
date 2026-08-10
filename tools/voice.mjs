@@ -13,6 +13,7 @@
 // rendered here and only the finished MP3 is published.
 
 import { readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -123,6 +124,30 @@ async function main() {
   const board = JSON.parse(await readFile(BOARD, "utf8"));
   const text = scriptFrom(board);
 
+  // QUOTA GUARD. The board republishes many times an hour; a brief is ~2,000
+  // characters and the ElevenLabs free tier is 10,000 a MONTH. Rendering on
+  // every publish would exhaust it in a single day. So: only re-render when the
+  // words actually changed, and never more than BUDGET_PER_DAY times daily.
+  const BUDGET_PER_DAY = 4;
+  const LEDGER = join(ROOT, "private", ".voice-ledger.json");
+  const scriptHash = createHash("sha256").update(text).digest("hex").slice(0, 16);
+  const today = new Date().toISOString().slice(0, 10);
+
+  let ledger = { day: today, spent: 0, hash: "", chars: 0 };
+  if (existsSync(LEDGER)) {
+    try { ledger = JSON.parse(await readFile(LEDGER, "utf8")); } catch {}
+  }
+  if (ledger.day !== today) ledger = { day: today, spent: 0, hash: ledger.hash, chars: 0 };
+
+  if (ledger.hash === scriptHash && existsSync(OUT)) {
+    console.log("  Voice: brief unchanged — keeping the existing audio (0 characters spent).");
+    return;
+  }
+  if (ledger.spent >= BUDGET_PER_DAY) {
+    console.log(`  Voice: daily render budget reached (${ledger.spent}/${BUDGET_PER_DAY}) — keeping the existing audio.`);
+    return;
+  }
+
   let audio;
   try {
     if (provider === "elevenlabs") audio = await elevenlabs(rest.join(":"), text);
@@ -139,7 +164,12 @@ async function main() {
   await writeFile(META, JSON.stringify({
     provider, chars: text.length, built: new Date().toISOString(),
   }, null, 2) + "\n", "utf8");
+
+  ledger = { day: today, spent: ledger.spent + 1, hash: scriptHash, chars: (ledger.chars || 0) + text.length };
+  await writeFile(LEDGER, JSON.stringify(ledger, null, 2) + "\n", "utf8");
+
   console.log(`  Voice: ${(audio.length / 1024).toFixed(0)} KB via ${provider} -> brief.mp3`);
+  console.log(`         ${text.length} characters · render ${ledger.spent}/${BUDGET_PER_DAY} today`);
 }
 
 main().catch((e) => { console.log("  Voice: " + e.message); });
