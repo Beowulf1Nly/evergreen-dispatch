@@ -438,7 +438,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "feff4d799dc2"; /* @@VERSION@@ */
+  var APP_VERSION = "99ba53e6d1fb"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -1060,7 +1060,7 @@
     if (wxp) wxp.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      if (speaking || speechSynthesis.speaking || speechSynthesis.pending) {
+      if (isSpeaking()) {
         stopSpeaking(); wxp.dataset.on = "0"; return;
       }
       wxp.dataset.on = "1";
@@ -1257,6 +1257,13 @@
   }
 
   var speaking = false;
+  // If an utterance dies without firing onend, or something else cancels the
+  // engine, `speaking` would stay true and every play button would become a
+  // dead "Stop". Re-sync against the engine before trusting the flag.
+  function isSpeaking() {
+    if (speaking && !speechSynthesis.speaking && !speechSynthesis.pending) speaking = false;
+    return speaking || speechSynthesis.speaking || speechSynthesis.pending;
+  }
   function speakSequence(text, onDone) {
     var chunks = splitSentences(text);
     var voice = chosenVoice();
@@ -1446,7 +1453,7 @@
     var audio = null;
     b.addEventListener("click", async function () {
       if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; reset(); return; }
-      if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); reset(); return; }
+      if (isSpeaking()) { stopSpeaking(); reset(); return; }
 
       b.dataset.on = "1"; label.textContent = "Stop";
 
@@ -1489,7 +1496,7 @@
       function rReset() { rb.dataset.on = "0"; rl.textContent = "Full rundown"; }
       rb.addEventListener("click", function () {
         if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; reset(); }
-        if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); rReset(); reset(); return; }
+        if (isSpeaking()) { stopSpeaking(); rReset(); reset(); return; }
         rb.dataset.on = "1"; rl.textContent = "Stop";
         speakSequence(rundownText(d), rReset);
       });
