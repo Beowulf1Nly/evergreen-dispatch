@@ -255,6 +255,28 @@
   .wxday__r.warn { color:var(--flag); font-weight:650; }
   .wxday__u { font-family:var(--f-mono); font-size:10px; color:var(--ink-3); }
 
+  /* ---------- risk chips ---------- */
+  .chips { display:flex; gap:7px; overflow-x:auto; padding-bottom:3px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chip {
+    flex:0 0 auto; display:flex; align-items:center; gap:7px;
+    border:1px solid var(--rule); border-left:3px solid var(--ink-3);
+    border-radius:8px; background:var(--card); padding:8px 11px; min-height:44px;
+    cursor:pointer; text-align:left; font-family:var(--f-ui); color:var(--ink);
+    box-shadow:var(--shadow); max-width:78vw;
+  }
+  .chip[data-tone="critical"] { border-left-color:var(--critical); }
+  .chip[data-tone="flag"] { border-left-color:var(--flag); }
+  .chip:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .chip__k { font-family:var(--f-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-3); display:block; }
+  .chip__v { font-size:14px; font-weight:650; white-space:nowrap; display:block; }
+  .chip[data-tone="critical"] .chip__v { color:var(--critical); }
+  .chipnote {
+    font-size:14px; color:var(--ink-2); line-height:1.5;
+    border-left:3px solid var(--rule); padding:2px 0 2px 12px; margin-top:2px;
+  }
+  .chipnote[hidden] { display:none; }
+
   /* ---------- risk ---------- */
   .risk { border:1px solid var(--rule); border-radius:11px; background:var(--card); overflow:hidden; box-shadow:var(--shadow); }
   .risk__row { display:flex; gap:11px; padding:12px 15px; border-top:1px solid var(--rule); }
@@ -405,7 +427,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "1fe58d1221ce"; /* @@VERSION@@ */
+  var APP_VERSION = "9b3c36f3f8c6"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -886,20 +908,18 @@
       esc(wxSum.line) + "</summary>" +
       '<div class="strip__body">' + weatherHTML(a, ageMin) + "</div></details>";
 
+    // Facts, not prose. The assessment above already tells the story — repeating
+    // it here in full sentences is what made the top of the board feel like
+    // reading the same thing twice. Tap a chip for the detail.
     if (d.risk && d.risk.length) {
-      var worst = d.risk.some(function (r) { return r.tone === "critical"; }) ? "bad"
-        : d.risk.some(function (r) { return r.tone === "flag"; }) ? "warn" : "ok";
-      var lead = d.risk[0];
-      html += '<details class="strip"' + (prefs.openRisk ? " open" : "") + ' data-strip="risk">' +
-        '<summary><span class="strip__dot' + (worst === "bad" ? " strip__dot--bad" : worst === "warn" ? " strip__dot--warn" : "") + '"></span>' +
-        esc(lead.label + " — " + lead.detail) +
-        '<span class="strip__sub">&nbsp;+' + (d.risk.length - 1) + "</span></summary>" +
-        '<div class="strip__body"><div class="risk">' +
-        d.risk.map(function (r) {
-          return '<div class="risk__row" data-tone="' + esc(r.tone || "normal") + '"><div class="risk__stripe"></div>' +
-            '<div class="risk__body"><div class="risk__label">' + esc(r.label) + '</div><div class="risk__detail">' + esc(r.detail) + "</div>" +
-            (r.note ? '<div class="risk__note">' + esc(r.note) + "</div>" : "") + "</div></div>";
-        }).join("") + "</div></div></details>";
+      html += '<div class="chips">' + d.risk.map(function (r, i) {
+        return '<button class="chip" type="button" data-tone="' + esc(r.tone || "normal") + '" data-chip="' + i + '">' +
+          '<span><span class="chip__k">' + esc(r.label) + '</span>' +
+          '<span class="chip__v">' + esc(r.detail) + "</span></span></button>";
+      }).join("") + "</div>" +
+      d.risk.map(function (r, i) {
+        return r.note ? '<div class="chipnote" id="chipnote' + i + '" hidden>' + esc(r.note) + "</div>" : "";
+      }).join("");
     }
 
     html += '<div class="tabs" role="tablist">' + tabHTML + "</div>";
@@ -1018,6 +1038,16 @@
     if (fresh) fresh.addEventListener("click", function () {
       toast("Checking…");
       pullNow(true);
+    });
+
+    // One chip's detail open at a time — this is a glance surface, not a wall.
+    app.querySelectorAll("[data-chip]").forEach(function (c) {
+      c.addEventListener("click", function () {
+        var note = document.getElementById("chipnote" + c.dataset.chip);
+        var wasOpen = note && !note.hidden;
+        app.querySelectorAll(".chipnote").forEach(function (n) { n.hidden = true; });
+        if (note && !wasOpen) note.hidden = false;
+      });
     });
 
     app.querySelectorAll("[data-tab]").forEach(function (t) {
