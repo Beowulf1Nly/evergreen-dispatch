@@ -512,7 +512,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "6a78ee26c64d"; /* @@VERSION@@ */
+  var APP_VERSION = "e8e18b9c2908"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -1513,7 +1513,7 @@
     return out;
   }
 
-  function walkShow() {
+  function walkShow(intro) {
     var it = walk.queue[walk.i];
     if (!it) return walkEnd(true);
     document.getElementById("walkWhere").textContent = WHEN_LABEL[it.when] || "";
@@ -1531,7 +1531,8 @@
     document.getElementById("walkUpdate").hidden = true;
 
     stopSpeaking();
-    speakSequence(it.q.giver + ". " + objTitle(it.o) + "." + (it.o.note ? " " + it.o.note : ""));
+    speakSequence((intro ? "Right. " + walk.queue.length + " to get through. " : "") +
+      it.q.giver + ". " + objTitle(it.o) + "." + (it.o.note ? " " + it.o.note : ""));
   }
 
   function walkNext() {
@@ -1562,7 +1563,10 @@
     walk.on = true;
     document.getElementById("walk").hidden = false;
     document.body.style.overflow = "hidden";
-    speakSequence("Right. " + walk.queue.length + " to get through.", walkShow);
+    // Paint the first job immediately. Waiting for the intro to finish speaking
+    // left him looking at an empty card — and it would never fill at all on a
+    // device with speech unavailable.
+    walkShow(true);
   }
 
   function wireWalk() {
