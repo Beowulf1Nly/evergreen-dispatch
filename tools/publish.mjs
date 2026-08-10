@@ -55,6 +55,12 @@ step("encrypt", () =>
   execFileSync(process.execPath, [join(ROOT, "tools", "encrypt.mjs")], { stdio: "inherit" })
 );
 
+// 1a. Render the spoken brief, if a TTS key is configured. Never fatal —
+// a voice failure must not stop the board going out.
+step("voice", () =>
+  execFileSync(process.execPath, [join(ROOT, "tools", "voice.mjs")], { stdio: "inherit" })
+);
+
 // 1b. Stamp the app build so a phone running old code can notice and replace
 // itself. Hash the file with the version line blanked, otherwise stamping it
 // would change the hash that produced it.

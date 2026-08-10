@@ -89,6 +89,14 @@
   .mast__row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
   .mast h1 { margin:0; font-size:25px; font-weight:800; letter-spacing:-.02em; }
   .mast h1 span { color:var(--accent); }
+  .hello { display:flex; flex-direction:column; gap:3px; }
+  .hello h1 { margin:0; font-size:26px; font-weight:800; letter-spacing:-.025em; text-wrap:balance; }
+  .hello__meta {
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+    font-family:var(--f-mono); font-size:11px; text-transform:uppercase; letter-spacing:.09em;
+    color:var(--ink-3); font-variant-numeric:tabular-nums;
+  }
+  .hello__meta > span:first-child { color:var(--accent); font-weight:700; }
   .mast__date { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.07em; font-variant-numeric:tabular-nums; }
 
   /* ---------- day progress (inline, one line) ---------- */
@@ -215,6 +223,33 @@
   .wx__line b { font-weight:650; }
   .wx__line span { color:var(--ink-2); }
   .wx__stale { padding:9px 15px; font-size:12.5px; color:var(--flag); background:var(--flag-bg); border-top:1px solid var(--rule); }
+
+  /* conditions readout */
+  .wxgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border-top:1px solid var(--rule); }
+  .wxcell { background:var(--card); padding:9px 11px; display:flex; flex-direction:column; gap:1px; }
+  .wxcell__k { font-family:var(--f-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.11em; color:var(--ink-3); }
+  .wxcell__v { font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .wxcell--warn .wxcell__v { color:var(--flag); }
+  .wxcell--bad .wxcell__v { color:var(--critical); }
+
+  /* hour by hour */
+  .wxtablewrap { overflow-x:auto; border-top:1px solid var(--rule); }
+  .wxtable { width:100%; border-collapse:collapse; font-family:var(--f-mono); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .wxtable th { text-align:left; padding:7px 8px; font-size:9.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; border-bottom:1px solid var(--rule); white-space:nowrap; }
+  .wxtable td { padding:6px 8px; border-bottom:1px solid var(--rule); white-space:nowrap; }
+  .wxtable tr:last-child td { border-bottom:none; }
+  .wxtable td.warn { color:var(--flag); font-weight:700; }
+  .wxtable td.bad { color:var(--critical); font-weight:700; }
+  .wxrow--dark td { opacity:.5; }
+
+  /* three day outlook */
+  .wxdays { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border-top:1px solid var(--rule); }
+  .wxday { background:var(--card); padding:10px 11px; display:flex; flex-direction:column; gap:2px; }
+  .wxday__n { font-family:var(--f-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.11em; color:var(--ink-3); }
+  .wxday__t { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .wxday__r { font-size:12px; color:var(--ink-2); }
+  .wxday__r.warn { color:var(--flag); font-weight:650; }
+  .wxday__u { font-family:var(--f-mono); font-size:10px; color:var(--ink-3); }
 
   /* ---------- risk ---------- */
   .risk { border:1px solid var(--rule); border-radius:11px; background:var(--card); overflow:hidden; box-shadow:var(--shadow); }
@@ -366,7 +401,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "0b893fb20b7d"; /* @@VERSION@@ */
+  var APP_VERSION = "a297d34d58db"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -394,6 +429,18 @@
     });
   }
   function slug(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+
+  var OWNER = "Hunter";
+  function greeting() {
+    var h = new Date().getHours();
+    var part = h < 5 ? "You're up early" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Late one";
+    return part + ", " + OWNER + ".";
+  }
+  function clockText() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    var ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+    return h + ":" + String(m).padStart(2, "0") + " " + ap;
+  }
   function b64ToBytes(b64) {
     var bin = atob(b64), out = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -490,8 +537,13 @@
   /* ============ weather ============ */
   async function loadWeather() {
     var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT + "&longitude=" + LON +
-      "&hourly=precipitation_probability,apparent_temperature,temperature_2m" +
-      "&daily=sunset&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=2";
+      "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,weather_code,is_day" +
+      "&hourly=precipitation_probability,precipitation,apparent_temperature,temperature_2m," +
+      "relative_humidity_2m,wind_speed_10m,wind_gusts_10m,uv_index,cloud_cover,weather_code" +
+      "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_probability_max," +
+      "precipitation_sum,uv_index_max,wind_gusts_10m_max,weather_code" +
+      "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch" +
+      "&timezone=America%2FNew_York&forecast_days=3";
     try {
       var res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
@@ -511,12 +563,18 @@
     if (idx < 0) return null;
     var sunset = new Date(j.daily.sunset[0]);
     var hours = [];
-    for (var i = idx; i < j.hourly.time.length && hours.length < 11; i++) {
+    for (var i = idx; i < j.hourly.time.length && hours.length < 14; i++) {
       var when = new Date(j.hourly.time[i]);
       hours.push({
         when: when, pop: j.hourly.precipitation_probability[i],
         feels: Math.round(j.hourly.apparent_temperature[i]),
-        temp: Math.round(j.hourly.temperature_2m[i]), daylight: when <= sunset
+        temp: Math.round(j.hourly.temperature_2m[i]), daylight: when <= sunset,
+        rain: j.hourly.precipitation ? j.hourly.precipitation[i] : null,
+        rh: j.hourly.relative_humidity_2m ? j.hourly.relative_humidity_2m[i] : null,
+        wind: j.hourly.wind_speed_10m ? Math.round(j.hourly.wind_speed_10m[i]) : null,
+        gust: j.hourly.wind_gusts_10m ? Math.round(j.hourly.wind_gusts_10m[i]) : null,
+        uv: j.hourly.uv_index ? Math.round(j.hourly.uv_index[i]) : null,
+        cloud: j.hourly.cloud_cover ? j.hourly.cloud_cover[i] : null
       });
     }
     var best = null, run = null;
@@ -529,7 +587,27 @@
     var daylit = hours.filter(function (h) { return h.daylight; });
     var wettest = daylit.reduce(function (a, h) { return (!a || h.pop > a.pop) ? h : a; }, null);
     var peakFeels = daylit.reduce(function (a, h) { return (a == null || h.feels > a) ? h.feels : a; }, null);
-    return { hours: hours, best: best, wettest: wettest, peakFeels: peakFeels, sunset: sunset, current: hours[0] };
+
+    var days = (j.daily.time || []).map(function (t, i) {
+      return {
+        date: new Date(t + "T12:00:00"),
+        hi: Math.round(j.daily.temperature_2m_max[i]),
+        lo: Math.round(j.daily.temperature_2m_min[i]),
+        pop: j.daily.precipitation_probability_max[i],
+        rain: j.daily.precipitation_sum[i],
+        uv: Math.round(j.daily.uv_index_max[i]),
+        gust: Math.round(j.daily.wind_gusts_10m_max[i]),
+        code: j.daily.weather_code[i],
+        sunrise: new Date(j.daily.sunrise[i]),
+        sunset: new Date(j.daily.sunset[i])
+      };
+    });
+
+    return {
+      hours: hours, best: best, wettest: wettest, peakFeels: peakFeels,
+      sunset: sunset, sunrise: new Date(j.daily.sunrise[0]),
+      current: hours[0], now: j.current || null, days: days
+    };
   }
 
   function hhmm(d) {
@@ -594,10 +672,49 @@
       return '<div class="wx__line"><span class="wx__dot' + cls + '"></span><div><b>' + esc(l.head) + "</b>" + (l.body ? " <span>" + esc(l.body) + "</span>" : "") + "</div></div>";
     }).join("");
     var stale = ageMin > 90 ? '<div class="wx__stale">Cached ' + Math.round(ageMin / 60) + "h ago — you were offline when this loaded.</div>" : "";
-    return '<div class="wx"><div class="wx__top"><span class="wx__place">Ocala · next 10 hours</span>' +
+
+    // Conditions readout — the numbers that decide whether the day is workable.
+    var n = a.now || {};
+    var uvNow = a.hours[0].uv;
+    function cell(label, value, tone) {
+      return '<div class="wxcell' + (tone ? " wxcell--" + tone : "") + '">' +
+        '<span class="wxcell__k">' + esc(label) + '</span><span class="wxcell__v">' + esc(value) + "</span></div>";
+    }
+    var grid = '<div class="wxgrid">' +
+      cell("Feels", a.current.feels + "°", a.current.feels >= 108 ? "bad" : a.current.feels >= 100 ? "warn" : "") +
+      cell("Humidity", (n.relative_humidity_2m != null ? n.relative_humidity_2m : a.hours[0].rh) + "%") +
+      cell("Wind", (a.hours[0].wind != null ? a.hours[0].wind : "–") + " mph") +
+      cell("Gusts", (a.hours[0].gust != null ? a.hours[0].gust : "–") + " mph",
+           a.hours[0].gust >= 25 ? "warn" : "") +
+      cell("UV", uvNow == null ? "–" : String(uvNow), uvNow >= 8 ? "bad" : uvNow >= 6 ? "warn" : "") +
+      cell("Daylight", hhmm(a.sunrise) + "–" + hhmm(a.sunset)) +
+      "</div>";
+
+    // Hour by hour, for when the summary isn't enough.
+    var rows = a.hours.map(function (h) {
+      return "<tr" + (h.daylight ? "" : ' class="wxrow--dark"') + "><td>" + hhmm(h.when).replace(":00", "") + "</td>" +
+        "<td>" + h.temp + "°</td><td>" + h.feels + "°</td>" +
+        '<td class="' + (h.pop >= 60 ? "bad" : h.pop >= 40 ? "warn" : "") + '">' + h.pop + "%</td>" +
+        "<td>" + (h.rain != null && h.rain > 0 ? h.rain.toFixed(2) + '"' : "–") + "</td>" +
+        "<td>" + (h.wind == null ? "–" : h.wind + (h.gust != null && h.gust > h.wind + 6 ? "/" + h.gust : "")) + "</td>" +
+        "<td>" + (h.uv == null ? "–" : h.uv) + "</td></tr>";
+    }).join("");
+    var table = '<div class="wxtablewrap"><table class="wxtable">' +
+      "<thead><tr><th>Hr</th><th>Temp</th><th>Feels</th><th>Rain</th><th>Amt</th><th>Wind</th><th>UV</th></tr></thead>" +
+      "<tbody>" + rows + "</tbody></table></div>";
+
+    var DAYNAME = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    var outlook = '<div class="wxdays">' + a.days.map(function (dd, i) {
+      return '<div class="wxday"><span class="wxday__n">' + (i === 0 ? "Today" : DAYNAME[dd.date.getDay()]) + "</span>" +
+        '<span class="wxday__t">' + dd.hi + "° / " + dd.lo + "°</span>" +
+        '<span class="wxday__r' + (dd.pop >= 40 ? " warn" : "") + '">' + dd.pop + "% rain</span>" +
+        '<span class="wxday__u">UV ' + dd.uv + " · gust " + dd.gust + "</span></div>";
+    }).join("") + "</div>";
+
+    return '<div class="wx"><div class="wx__top"><span class="wx__place">Ocala · next 14 hours</span>' +
       '<span class="wx__now"><b>' + a.current.temp + "°</b> &nbsp;feels " + a.current.feels + "° &nbsp;" + a.current.pop + "% rain</span></div>" +
       '<div class="wx__chart">' + bars + '</div><div class="wx__hours">' + labels + "</div>" +
-      '<div class="wx__verdict">' + lines + "</div>" + stale + "</div>";
+      '<div class="wx__verdict">' + lines + "</div>" + grid + table + outlook + stale + "</div>";
   }
 
   /* ============ quest model ============ */
@@ -719,9 +836,11 @@
     var cleared = quests.filter(function (q) { return questState(q).complete; }).length;
     var pct = allObjs ? Math.round((allDone / allObjs) * 100) : 0;
 
-    var html = '<header class="mast"><div class="mast__rule"></div><div class="mast__row">' +
-      "<h1>Evergreen <span>Dispatch</span></h1>" +
-      '<div class="mast__date">' + esc(d.dateLabel) + "</div></div>" +
+    var html = '<header class="mast"><div class="mast__rule"></div>' +
+      '<div class="hello"><h1 id="greeting">' + esc(greeting()) + "</h1>" +
+      '<div class="hello__meta"><span id="clock">' + esc(clockText()) + "</span>" +
+      '<span>·</span><span>' + esc(d.dateLabel) + "</span>" +
+      '<span>·</span><span>Evergreen Dispatch</span></div></div>' +
       '<div class="tally"><div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
       '<span class="tally__n">' + allDone + " / " + allObjs + " done</span></div>" +
       // Freshness has to be visible. "It doesn't update" is impossible to debug
@@ -878,6 +997,14 @@
 
   function wire(d) {
     paintFreshness();
+    // Live clock and greeting, updated in place so a redraw isn't needed.
+    if (!wire.clockTimer) {
+      wire.clockTimer = setInterval(function () {
+        var c = document.getElementById("clock"), g = document.getElementById("greeting");
+        if (c) c.textContent = clockText();
+        if (g && g.textContent !== greeting()) g.textContent = greeting();
+      }, 20000);
+    }
     var fresh = document.getElementById("freshness");
     if (fresh) fresh.addEventListener("click", function () {
       toast("Checking…");
@@ -1162,9 +1289,26 @@
     var label = document.getElementById("speakLabel");
     if (!("speechSynthesis" in window)) { b.disabled = true; label.textContent = "Speech not supported here"; return; }
     function reset() { b.dataset.on = "0"; label.textContent = "Brief me"; }
-    b.addEventListener("click", function () {
+
+    // If a neural voice was rendered at publish time, play that — it's a real
+    // voice rather than the browser's synthesizer. Falls back automatically.
+    var audio = null;
+    b.addEventListener("click", async function () {
+      if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; reset(); return; }
       if (speaking || speechSynthesis.speaking || speechSynthesis.pending) { stopSpeaking(); reset(); return; }
+
       b.dataset.on = "1"; label.textContent = "Stop";
+      try {
+        var head = await fetch("brief.mp3", { method: "HEAD", cache: "no-store" });
+        if (head.ok) {
+          audio = new Audio("brief.mp3?t=" + encodeURIComponent(bundle.built));
+          audio.onended = reset;
+          audio.onerror = function () { speakSequence(briefText(d), reset); };
+          await audio.play();
+          return;
+        }
+      } catch (e) { /* no rendered audio — use the browser voice */ }
+      audio = null;
       speakSequence(briefText(d), reset);
     });
   }
