@@ -46,6 +46,10 @@
   }
 
   * { box-sizing: border-box; }
+  /* #lock and #app both set an explicit display, which outranks the `hidden`
+     attribute's UA rule — without this the lock screen never goes away and the
+     board renders underneath it. */
+  [hidden] { display: none !important; }
   html { background: var(--paper); }
   body {
     margin:0; background:var(--paper); color:var(--ink);
@@ -87,12 +91,39 @@
   .mast h1 span { color:var(--accent); }
   .mast__date { font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.07em; font-variant-numeric:tabular-nums; }
 
-  /* ---------- day progress ---------- */
-  .tally { display:flex; flex-direction:column; gap:8px; }
-  .tally__row { display:flex; justify-content:space-between; align-items:baseline; font-family:var(--f-mono); font-size:12px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-2); }
-  .tally__row b { color:var(--ink); font-size:15px; font-weight:700; letter-spacing:0; font-variant-numeric:tabular-nums; }
-  .tally__track { height:7px; border-radius:4px; background:var(--rule); overflow:hidden; }
-  .tally__fill { height:100%; background:var(--accent); border-radius:4px; transition:width .3s ease; }
+  /* ---------- day progress (inline, one line) ---------- */
+  .tally { display:flex; align-items:center; gap:10px; }
+  .tally__track { flex:1; height:5px; border-radius:3px; background:var(--rule); overflow:hidden; }
+  .tally__fill { height:100%; background:var(--accent); border-radius:3px; transition:width .3s ease; }
+  .tally__n { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* ---------- collapsible strips ---------- */
+  .strip { border:1px solid var(--rule); border-radius:10px; background:var(--card); }
+  .strip > summary {
+    list-style:none; cursor:pointer; padding:11px 14px; min-height:48px;
+    display:flex; align-items:center; gap:10px; font-size:14.5px; color:var(--ink);
+  }
+  .strip > summary::-webkit-details-marker { display:none; }
+  .strip > summary::after { content:"⌄"; margin-left:auto; color:var(--ink-3); font-size:15px; line-height:1; }
+  .strip[open] > summary::after { content:"⌃"; }
+  .strip > summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; border-radius:10px; }
+  .strip__dot { flex:none; width:9px; height:9px; border-radius:50%; background:var(--accent); }
+  .strip__dot--warn { background:var(--flag); }
+  .strip__dot--bad { background:var(--critical); }
+  .strip__body { padding:0 14px 13px; display:flex; flex-direction:column; gap:12px; }
+  .strip__body > .wx, .strip__body > .risk { border:none; box-shadow:none; border-radius:0; background:transparent; }
+  .strip__body > .wx .wx__top, .strip__body > .wx .wx__chart, .strip__body > .wx .wx__hours { padding-left:0; padding-right:0; }
+  .strip__body > .wx .wx__verdict { padding:11px 0 0; }
+  .strip__body > .risk .risk__row { padding-left:0; padding-right:0; }
+  .strip__sub { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+
+  .morelink {
+    background:none; border:none; padding:10px 4px; min-height:44px;
+    font-family:var(--f-ui); font-size:14px; font-weight:600; color:var(--ink-2);
+    cursor:pointer; align-self:flex-start;
+  }
+  .morelink:hover { color:var(--accent); }
+  .morelink:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
 
   /* ---------- tabs ---------- */
   .tabs {
@@ -125,12 +156,12 @@
   }
   #toast[data-show="1"] { opacity:1; transform:translateX(-50%) translateY(0); }
 
-  /* ---------- toolbar ---------- */
+  /* ---------- toolbar (lives inside the Settings strip now) ---------- */
   .tools { display:flex; gap:8px; flex-wrap:wrap; }
   .tool {
     flex:1 1 auto; min-width:0; min-height:46px; padding:10px 12px;
     font-family:var(--f-ui); font-size:14px; font-weight:600;
-    border:1px solid var(--rule); border-radius:9px; background:var(--card); color:var(--ink-2);
+    border:1px solid var(--rule); border-radius:9px; background:var(--paper); color:var(--ink-2);
     cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; white-space:nowrap;
   }
   .tool[aria-pressed="true"] { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
@@ -238,9 +269,8 @@
   .editbar .row { display:flex; gap:8px; }
   .editbar .row .btn { min-height:46px; font-size:15px; }
 
-  /* ---------- settings ---------- */
-  .settings { display:none; flex-direction:column; gap:13px; padding:15px; border:1px solid var(--rule); border-radius:11px; background:var(--card); box-shadow:var(--shadow); }
-  body[data-settings="1"] .settings { display:flex; }
+  /* ---------- settings (inside a strip) ---------- */
+  .settings { display:flex; flex-direction:column; gap:13px; }
   .field { display:flex; flex-direction:column; gap:6px; }
   .field label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.11em; color:var(--ink-2); }
   .field select { font-family:var(--f-ui); font-size:15px; padding:11px 13px; border-radius:9px; border:1.5px solid var(--rule); background:var(--paper); color:var(--ink); min-height:46px; width:100%; }
@@ -317,7 +347,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "0deef8fd2415"; /* @@VERSION@@ */
+  var APP_VERSION = "4b6268db9e49"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -511,6 +541,26 @@
     return out;
   }
 
+  // The one line that answers the only weather question he actually has:
+  // can I mow, for how long, and is it going to hurt out there.
+  function weatherSummary(a) {
+    if (!a) return { tone: "warn", line: "Weather unavailable" };
+    var bits = [a.current.temp + "°"];
+    var tone = "ok";
+    if (a.best && a.best.len >= 2) {
+      bits.push("mow till " + hhmm(new Date(Math.min(a.best.end.when.getTime() + 3600000, a.sunset.getTime()))));
+    } else { bits.push("no clear window"); tone = "bad"; }
+    if (a.wettest && a.wettest.pop >= 40) {
+      bits.push(a.wettest.pop + "% rain " + hhmm(a.wettest.when));
+      if (tone === "ok") tone = a.wettest.pop >= 60 ? "bad" : "warn";
+    }
+    if (a.peakFeels != null && a.peakFeels >= 100) {
+      bits.push("feels " + a.peakFeels + "°");
+      if (tone === "ok") tone = a.peakFeels >= 108 ? "bad" : "warn";
+    }
+    return { tone: tone, line: bits.join(" · ") };
+  }
+
   function weatherHTML(a, ageMin) {
     if (!a) return '<div class="wx"><div class="wx__verdict"><div class="wx__line"><span class="wx__dot wx__dot--warn"></span><div><b>Weather unavailable</b> <span>— no signal, and nothing cached yet.</span></div></div></div></div>';
     var maxPop = Math.max(10, Math.max.apply(null, a.hours.map(function (h) { return h.pop; })));
@@ -633,11 +683,9 @@
 
     var html = '<header class="mast"><div class="mast__rule"></div><div class="mast__row">' +
       "<h1>Evergreen <span>Dispatch</span></h1>" +
-      '<div class="mast__date">' + esc(d.dateLabel) + "</div></div></header>";
-
-    html += '<div class="tally"><div class="tally__row"><span>Objectives</span><b>' + allDone + " / " + allObjs + "</b></div>" +
-      '<div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
-      '<div class="tally__row"><span>Quests cleared</span><b>' + cleared + " / " + quests.length + "</b></div></div>";
+      '<div class="mast__date">' + esc(d.dateLabel) + "</div></div>" +
+      '<div class="tally"><div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
+      '<span class="tally__n">' + allDone + " / " + allObjs + " done</span></div></header>";
 
     // Tabs. A tab with nothing left in it is dropped rather than sitting there
     // empty, except the one currently open.
@@ -650,22 +698,8 @@
         ' aria-selected="' + (t === activeTab ? "true" : "false") + '">' + esc(t) +
         '<span class="tab__n">' + open.length + "</span></button>";
     }).join("");
-    html += '<div class="tabs" role="tablist">' + tabHTML + "</div>";
-
-    html += '<div class="tools">' +
-      '<button class="tool" id="tShowDone" type="button" aria-pressed="' + (prefs.showDone ? "true" : "false") + '">' +
-        (prefs.showDone ? "Hide completed" : "Show completed") + ' <b>' + cleared + "</b></button>" +
-      '<button class="tool" id="tEdit" type="button" aria-pressed="false">Edit</button>' +
-      '<button class="tool" id="tSettings" type="button" aria-pressed="false">Settings</button></div>';
-
-    html += '<div class="settings" id="settingsPanel">' +
-      '<div class="field"><label for="voiceSel">Briefing voice</label>' +
-      '<select id="voiceSel"></select>' +
-      '<p id="voiceHint">Checking what this device has installed…</p></div>' +
-      '<div class="field"><label>Your edits</label>' +
-      '<button class="mini mini--danger" id="resetEdits" type="button" style="width:100%;min-height:46px">Reset everything I\'ve changed</button>' +
-      '<p>Renames, hidden quests, your own quests, and ticked boxes all live on this device only. Resetting brings the published board back.</p></div></div>';
-
+    // The read of the day, and the button that speaks it. This is the only
+    // thing above the tabs that isn't one line — it's the reason he opened it.
     if (d.assessment) {
       html += '<div class="read"><div class="assessment">' + esc(d.assessment) + "</div>" +
         '<button class="speak" id="speak" type="button" data-on="0">' +
@@ -674,16 +708,31 @@
         '<span id="speakLabel">Brief me</span></button></div>';
     }
 
-    html += weatherHTML(a, ageMin);
+    // Weather and exposure collapse to a single line each. Open them if you
+    // want the detail; most mornings the line is the whole answer.
+    var wxSum = weatherSummary(a);
+    html += '<details class="strip"' + (prefs.openWx ? " open" : "") + ' data-strip="wx">' +
+      '<summary><span class="strip__dot' + (wxSum.tone === "bad" ? " strip__dot--bad" : wxSum.tone === "warn" ? " strip__dot--warn" : "") + '"></span>' +
+      esc(wxSum.line) + "</summary>" +
+      '<div class="strip__body">' + weatherHTML(a, ageMin) + "</div></details>";
 
     if (d.risk && d.risk.length) {
-      html += '<section class="sec"><div class="sec__label">On the line</div><div class="risk">' +
+      var worst = d.risk.some(function (r) { return r.tone === "critical"; }) ? "bad"
+        : d.risk.some(function (r) { return r.tone === "flag"; }) ? "warn" : "ok";
+      var lead = d.risk[0];
+      html += '<details class="strip"' + (prefs.openRisk ? " open" : "") + ' data-strip="risk">' +
+        '<summary><span class="strip__dot' + (worst === "bad" ? " strip__dot--bad" : worst === "warn" ? " strip__dot--warn" : "") + '"></span>' +
+        esc(lead.label + " — " + lead.detail) +
+        '<span class="strip__sub">&nbsp;+' + (d.risk.length - 1) + "</span></summary>" +
+        '<div class="strip__body"><div class="risk">' +
         d.risk.map(function (r) {
           return '<div class="risk__row" data-tone="' + esc(r.tone || "normal") + '"><div class="risk__stripe"></div>' +
             '<div class="risk__body"><div class="risk__label">' + esc(r.label) + '</div><div class="risk__detail">' + esc(r.detail) + "</div>" +
             (r.note ? '<div class="risk__note">' + esc(r.note) + "</div>" : "") + "</div></div>";
-        }).join("") + "</div></section>";
+        }).join("") + "</div></div></details>";
     }
+
+    html += '<div class="tabs" role="tablist">' + tabHTML + "</div>";
 
     // Inside the open tab, group by when the work is due — overdue first.
     var tabQuests = quests.filter(function (q) { return inTab(q, activeTab); });
@@ -712,28 +761,51 @@
         : "Nothing in " + esc(activeTab) + " right now.") + "</div>";
     }
 
-    html += '<section class="sec"><div class="sec__label">Add your own</div>' +
-      '<div class="editbar"><p>Anything that isn\'t in Pocket — a personal errand, a reminder. It stays on this device.</p>' +
-      '<input id="newQuest" type="text" placeholder="e.g. Pick up mulch at 8" aria-label="New quest">' +
-      '<div class="row"><button class="btn" id="addQuest" type="button">Add quest</button></div></div></section>';
-
-    if (d.questions && d.questions.length) {
-      html += '<section class="sec"><div class="sec__label">Needs your call <span class="sec__count">' + d.questions.length + "</span></div>" +
-        d.questions.map(function (q) { return '<div class="q"><strong>' + esc(q.q) + "</strong><p>" + esc(q.note) + "</p></div>"; }).join("") + "</section>";
+    // Cleared work is one quiet link, not a permanent toggle taking up a row.
+    if (cleared) {
+      html += '<button class="morelink" id="tShowDone" type="button" aria-pressed="' + (prefs.showDone ? "true" : "false") + '">' +
+        (prefs.showDone ? "Hide " + cleared + " cleared" : "Show " + cleared + " cleared") + "</button>";
     }
 
-    if (d.system && d.system.length) {
-      html += '<section class="sec"><div class="sec__label">System</div><div class="status">' +
+    if (d.questions && d.questions.length) {
+      html += '<details class="strip"' + (prefs.openQ ? " open" : "") + ' data-strip="q">' +
+        '<summary><span class="strip__dot strip__dot--warn"></span>' + d.questions.length +
+        (d.questions.length === 1 ? " thing needs your call" : " things need your call") + "</summary>" +
+        '<div class="strip__body">' +
+        d.questions.map(function (q) { return '<div class="q"><strong>' + esc(q.q) + "</strong><p>" + esc(q.note) + "</p></div>"; }).join("") +
+        "</div></details>";
+    }
+
+    // Everything you only touch occasionally lives behind one line.
+    html += '<details class="strip"' + (prefs.openSet ? " open" : "") + ' data-strip="set">' +
+      '<summary><span class="strip__dot"></span>Settings &amp; editing</summary><div class="strip__body">' +
+
+      '<div class="tools"><button class="tool" id="tEdit" type="button" aria-pressed="' +
+        (document.body.dataset.edit === "1" ? "true" : "false") + '">' +
+        (document.body.dataset.edit === "1" ? "Done editing" : "Edit the board") + "</button></div>" +
+
+      '<div class="field"><label for="newQuest">Add your own quest</label>' +
+      '<input id="newQuest" type="text" placeholder="Pick up mulch at 8" aria-label="New quest">' +
+      '<button class="tool" id="addQuest" type="button">Add</button>' +
+      '<p>Anything that isn\'t in Pocket. It stays on this device.</p></div>' +
+
+      '<div class="field"><label for="voiceSel">Briefing voice</label>' +
+      '<select id="voiceSel"></select><p id="voiceHint">Checking what this device has installed…</p></div>' +
+
+      (d.system && d.system.length ? '<div class="field"><label>Status</label><div class="status">' +
         d.system.map(function (r) {
           return '<div class="status__row"><span class="status__dot status__dot--' + (r.state === "on" ? "on" : "off") +
             '"></span><div><b>' + esc(r.name) + "</b> — <span>" + esc(r.note) + "</span></div></div>";
-        }).join("") + "</div>" +
-        '<p class="note"><b>Ticking an objective is your own scratch mark.</b> It saves on this device, ' +
-        "but does <b>not</b> write back to Pocket — to actually close a job, say it into Pocket.</p></section>";
-    }
+        }).join("") + "</div></div>" : "") +
 
-    html += '<footer><span>Evergreen Lawn Care · Ocala &amp; Citrus Hills</span>' +
-      '<button class="lockbtn" id="forget" type="button">Lock this device</button></footer>';
+      '<p class="note"><b>Ticking an objective is your own scratch mark.</b> It saves on this device, ' +
+      "but does <b>not</b> write back to Pocket — to actually close a job, say it into Pocket.</p>" +
+
+      '<div class="field"><button class="mini mini--danger" id="resetEdits" type="button" style="width:100%;min-height:46px">Reset everything I\'ve changed</button>' +
+      '<button class="mini" id="forget" type="button" style="width:100%;min-height:46px">Lock this device</button></div>' +
+      "</div></details>";
+
+    html += '<footer><span>Evergreen Lawn Care · Ocala &amp; Citrus Hills</span></footer>';
 
     app.innerHTML = html;
     app.hidden = false;
@@ -789,17 +861,21 @@
       var on = document.body.dataset.edit === "1";
       document.body.dataset.edit = on ? "0" : "1";
       tEdit.setAttribute("aria-pressed", on ? "false" : "true");
-      tEdit.textContent = on ? "Edit" : "Done editing";
+      tEdit.textContent = on ? "Edit the board" : "Done editing";
       app.querySelectorAll("[data-obj-title]").forEach(function (el) {
         el.contentEditable = on ? "false" : "true";
       });
+      toast(on ? "Editing off" : "Editing on — tap a name to rename it");
     });
 
-    var tSet = document.getElementById("tSettings");
-    if (tSet) tSet.addEventListener("click", function () {
-      var on = document.body.dataset.settings === "1";
-      document.body.dataset.settings = on ? "0" : "1";
-      tSet.setAttribute("aria-pressed", on ? "false" : "true");
+    // Remember which strips he leaves open, so the board looks the same each
+    // time he picks the phone up.
+    var STRIP_PREF = { wx: "openWx", risk: "openRisk", q: "openQ", set: "openSet" };
+    app.querySelectorAll("[data-strip]").forEach(function (el) {
+      el.addEventListener("toggle", function () {
+        prefs[STRIP_PREF[el.dataset.strip]] = el.open;
+        savePrefs();
+      });
     });
 
     // inline rename
