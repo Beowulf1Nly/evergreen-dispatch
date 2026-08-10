@@ -183,6 +183,45 @@
 
   .empty { padding:22px 15px; text-align:center; color:var(--ink-3); font-size:15px; border:1px dashed var(--rule); border-radius:10px; }
 
+  /* ---------- rundown walkthrough ---------- */
+  #walk {
+    position:fixed; inset:0; z-index:60; background:var(--paper);
+    display:flex; flex-direction:column;
+    padding:calc(14px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .walk__top { display:flex; align-items:center; gap:11px; flex:none; }
+  .walk__track { flex:1; height:5px; border-radius:3px; background:var(--rule); overflow:hidden; }
+  .walk__fill { height:100%; background:var(--accent); border-radius:3px; transition:width .25s ease; }
+  .walk__count { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .walk__exit { background:none; border:none; color:var(--ink-3); font-size:20px; line-height:1; cursor:pointer; padding:6px 2px; min-width:34px; min-height:34px; }
+  .walk__exit:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .walk__body { flex:1; display:flex; flex-direction:column; justify-content:center; gap:9px; min-height:0; overflow-y:auto; padding:18px 0; }
+  .walk__where { font-family:var(--f-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--flag); }
+  .walk__giver { font-family:var(--f-mono); font-size:12px; text-transform:uppercase; letter-spacing:.11em; color:var(--accent); font-weight:700; }
+  .walk__title { margin:0; font-size:30px; font-weight:800; letter-spacing:-.025em; line-height:1.18; text-wrap:balance; }
+  .walk__note { margin:0; font-size:16px; color:var(--ink-2); line-height:1.5; }
+  .walk__yours { font-size:15px; color:var(--accent); border-left:3px solid var(--accent); padding-left:11px; }
+
+  .walk__update { display:flex; flex-direction:column; gap:8px; flex:none; padding-bottom:11px; }
+  .walk__update input {
+    font-family:var(--f-ui); font-size:16px; padding:14px; min-height:52px;
+    border:2px solid var(--accent); border-radius:11px; background:var(--card); color:var(--ink); width:100%;
+  }
+  .walk__update input:focus { outline:none; }
+
+  .walk__actions { display:flex; gap:9px; flex:none; }
+  .wact {
+    flex:1; min-height:66px; border-radius:13px; cursor:pointer;
+    font-family:var(--f-ui); font-size:17px; font-weight:700; letter-spacing:-.01em;
+    border:1.5px solid var(--rule); background:var(--card); color:var(--ink-2);
+  }
+  .wact:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .wact--done { background:var(--accent); border-color:var(--accent); color:#fff; flex:1.35; }
+  .wact--upd { color:var(--flag); border-color:color-mix(in srgb, var(--flag) 40%, transparent); }
+  .wact:active { transform:translateY(1px); }
+  @media (prefers-reduced-motion: reduce) { .wact:active { transform:none; } }
+
   /* ---------- save toast ---------- */
   #toast {
     position:fixed; left:50%; transform:translateX(-50%) translateY(20px);
@@ -208,7 +247,17 @@
 
   /* ---------- assessment + speak ---------- */
   .read { display:flex; flex-direction:column; gap:12px; }
-  .assessment { font-size:18.5px; line-height:1.5; font-weight:500; text-wrap:pretty; padding-left:14px; border-left:3px solid var(--accent); }
+  .assessment {
+    display:block; width:100%; text-align:left; cursor:pointer;
+    font-family:var(--f-ui); font-size:18.5px; line-height:1.5; font-weight:500;
+    text-wrap:pretty; padding:0 0 0 14px; border:none; border-left:3px solid var(--accent);
+    background:none; color:var(--ink);
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .assessment[data-open="1"] { -webkit-line-clamp:unset; display:block; }
+  .assessment:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .assessment::after { content:" more"; font-family:var(--f-mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); }
+  .assessment[data-open="1"]::after { content:" less"; }
   .speak { display:flex; align-items:center; justify-content:center; gap:10px; font-family:var(--f-ui); font-size:16px; font-weight:650; min-height:54px; width:100%; padding:14px 18px; border:1.5px solid var(--accent); border-radius:11px; background:var(--accent-bg); color:var(--accent); cursor:pointer; }
   .speak[data-on="1"] { background:var(--accent); color:#fff; }
   .speakrow { display:flex; gap:8px; }
@@ -430,6 +479,31 @@
 <div class="wrap" id="app" hidden></div>
 <div id="toast" role="status" aria-live="polite" data-show="0"></div>
 
+<div id="walk" hidden>
+  <div class="walk__top">
+    <div class="walk__track"><div class="walk__fill" id="walkFill"></div></div>
+    <span class="walk__count" id="walkCount"></span>
+    <button class="walk__exit" id="walkExit" type="button" aria-label="Leave the rundown">✕</button>
+  </div>
+  <div class="walk__body">
+    <div class="walk__where" id="walkWhere"></div>
+    <div class="walk__giver" id="walkGiver"></div>
+    <h2 class="walk__title" id="walkTitle"></h2>
+    <p class="walk__note" id="walkNote"></p>
+    <div class="walk__yours" id="walkYours" hidden></div>
+  </div>
+  <form class="walk__update" id="walkUpdate" hidden>
+    <input id="walkInput" type="text" autocomplete="off"
+           placeholder="What changed? (tap the mic on your keyboard)" aria-label="Update this job">
+    <button class="btn" type="submit">Save note</button>
+  </form>
+  <div class="walk__actions">
+    <button class="wact wact--skip" id="wSkip" type="button">Skip</button>
+    <button class="wact wact--upd" id="wUpd" type="button">Update</button>
+    <button class="wact wact--done" id="wDone" type="button">Done</button>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -438,7 +512,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "99ba53e6d1fb"; /* @@VERSION@@ */
+  var APP_VERSION = "6a78ee26c64d"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -534,9 +608,9 @@
   /* ============ your edits (device-local overlay) ============
      Layered on top of the published board so a rebuild never wipes them.
      Nothing here reaches Pocket — the UI says so plainly.                */
-  function blankOverlay() { return { v: 1, done: {}, hidden: {}, titles: {}, order: {}, custom: [] }; }
+  function blankOverlay() { return { v: 1, done: {}, hidden: {}, titles: {}, order: {}, custom: [], notes: {} }; }
   var overlay = load(OVERLAY_KEY, null) || blankOverlay();
-  ["done", "hidden", "titles", "order"].forEach(function (k) { if (!overlay[k]) overlay[k] = {}; });
+  ["done", "hidden", "titles", "order", "notes"].forEach(function (k) { if (!overlay[k]) overlay[k] = {}; });
   if (!Array.isArray(overlay.custom)) overlay.custom = [];
   function saveOverlay() { save(OVERLAY_KEY, overlay); }
 
@@ -899,7 +973,10 @@
     // The read of the day, and the button that speaks it. This is the only
     // thing above the tabs that isn't one line — it's the reason he opened it.
     if (d.assessment) {
-      html += '<div class="read"><div class="assessment">' + esc(d.assessment) + "</div>" +
+      // Clamped. It kept arriving as a wall of text, which is the last thing he
+      // wants at the top of the screen — tap to read the rest.
+      html += '<div class="read"><button class="assessment" id="assessment" type="button" data-open="0">' +
+        esc(d.assessment) + "</button>" +
         '<div class="speakrow">' +
         '<button class="speak" id="speak" type="button" data-on="0">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -908,7 +985,7 @@
         '<button class="speak speak--alt" id="rundown" type="button" data-on="0">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
-        '<span id="rundownLabel">Full rundown</span></button></div></div>';
+        '<span id="rundownLabel">Walk me through</span></button></div></div>';
     }
 
     // Weather and exposure collapse to a single line each. Open them if you
@@ -1052,6 +1129,11 @@
     if (fresh) fresh.addEventListener("click", function () {
       toast("Checking…");
       pullNow(true);
+    });
+
+    var ass = document.getElementById("assessment");
+    if (ass) ass.addEventListener("click", function () {
+      ass.dataset.open = ass.dataset.open === "1" ? "0" : "1";
     });
 
     // Weather read-aloud. Sits inside the strip's summary, so it must not also
@@ -1408,6 +1490,131 @@
     return p.join(" ");
   }
 
+  /* ============ the walkthrough ============
+     Reads one job at a time and waits for a decision. Skip, Done, or Update —
+     no scrolling, no hunting, thumb-sized targets, because he's doing this
+     between jobs with gloves on.                                          */
+  var walk = { queue: [], i: 0, on: false, board: null };
+
+  function walkQueue(d) {
+    var out = [];
+    var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
+    ["overdue", "today", "week", "open"].forEach(function (w) {
+      quests.filter(function (q) { return q.when === w; }).forEach(function (q) {
+        var st = questState(q);
+        var lockFrom = lockedIndex(q, st);
+        st.objs.forEach(function (o, idx) {
+          if (isDone(o.id)) return;
+          if (lockFrom >= 0 && idx >= lockFrom) return;      // can't act on it yet
+          out.push({ q: q, o: o, when: w });
+        });
+      });
+    });
+    return out;
+  }
+
+  function walkShow() {
+    var it = walk.queue[walk.i];
+    if (!it) return walkEnd(true);
+    document.getElementById("walkWhere").textContent = WHEN_LABEL[it.when] || "";
+    document.getElementById("walkGiver").textContent = it.q.giver;
+    document.getElementById("walkTitle").textContent = objTitle(it.o);
+    var note = document.getElementById("walkNote");
+    note.textContent = it.o.note || "";
+    note.hidden = !it.o.note;
+    var yours = document.getElementById("walkYours");
+    if (overlay.notes[it.o.id]) { yours.textContent = "Your note: " + overlay.notes[it.o.id]; yours.hidden = false; }
+    else { yours.hidden = true; }
+
+    document.getElementById("walkCount").textContent = (walk.i + 1) + " / " + walk.queue.length;
+    document.getElementById("walkFill").style.width = Math.round((walk.i / walk.queue.length) * 100) + "%";
+    document.getElementById("walkUpdate").hidden = true;
+
+    stopSpeaking();
+    speakSequence(it.q.giver + ". " + objTitle(it.o) + "." + (it.o.note ? " " + it.o.note : ""));
+  }
+
+  function walkNext() {
+    walk.i++;
+    if (walk.i >= walk.queue.length) return walkEnd(true);
+    walkShow();
+  }
+
+  function walkEnd(finished) {
+    walk.on = false;
+    stopSpeaking();
+    document.getElementById("walk").hidden = true;
+    document.body.style.overflow = "";
+    var y = window.scrollY;
+    redraw();
+    window.scrollTo(0, y);
+    if (finished) {
+      speakSequence("That's everything. Nice work.");
+      toast("Rundown finished");
+    }
+  }
+
+  function walkStart(d) {
+    walk.board = d;
+    walk.queue = walkQueue(d);
+    walk.i = 0;
+    if (!walk.queue.length) { toast("Nothing open to walk through"); return; }
+    walk.on = true;
+    document.getElementById("walk").hidden = false;
+    document.body.style.overflow = "hidden";
+    speakSequence("Right. " + walk.queue.length + " to get through.", walkShow);
+  }
+
+  function wireWalk() {
+    if (wireWalk.done) return;
+    wireWalk.done = true;
+
+    document.getElementById("walkExit").addEventListener("click", function () { walkEnd(false); });
+
+    document.getElementById("wSkip").addEventListener("click", function () { walkNext(); });
+
+    document.getElementById("wDone").addEventListener("click", function () {
+      var it = walk.queue[walk.i];
+      if (it) { overlay.done[it.o.id] = Date.now(); saveOverlay(); toast("Done — " + objTitle(it.o)); }
+      walkNext();
+    });
+
+    document.getElementById("wUpd").addEventListener("click", function () {
+      var box = document.getElementById("walkUpdate");
+      box.hidden = !box.hidden;
+      if (!box.hidden) {
+        stopSpeaking();
+        var cur = walk.queue[walk.i];
+        var inp = document.getElementById("walkInput");
+        inp.value = (cur && overlay.notes[cur.o.id]) || "";
+        inp.focus();
+      }
+    });
+
+    document.getElementById("walkUpdate").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var it = walk.queue[walk.i];
+      var val = document.getElementById("walkInput").value.trim();
+      if (it && val) {
+        overlay.notes[it.o.id] = val;
+        saveOverlay();
+        toast("Noted — say it into Pocket to make it stick");
+      }
+      document.getElementById("walkInput").value = "";
+      walkNext();
+    });
+
+    // Hardware keyboard, for when he's at the PC.
+    document.addEventListener("keydown", function (e) {
+      if (!walk.on) return;
+      if (e.key === "Escape") { walkEnd(false); }
+      else if (e.key === "ArrowRight" || e.key === "s") { walkNext(); }
+      else if (e.key === "Enter" && document.getElementById("walkUpdate").hidden) {
+        document.getElementById("wDone").click();
+      }
+    });
+  }
+
   // Everything, in board order. Browser-spoken, so length costs nothing.
   function rundownText(d) {
     var parts = [d.dateLabel + "."];
@@ -1496,9 +1703,9 @@
       function rReset() { rb.dataset.on = "0"; rl.textContent = "Full rundown"; }
       rb.addEventListener("click", function () {
         if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; reset(); }
-        if (isSpeaking()) { stopSpeaking(); rReset(); reset(); return; }
-        rb.dataset.on = "1"; rl.textContent = "Stop";
-        speakSequence(rundownText(d), rReset);
+        stopSpeaking(); rReset(); reset();
+        wireWalk();
+        walkStart(d);
       });
     }
   }
