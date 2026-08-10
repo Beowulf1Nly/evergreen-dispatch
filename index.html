@@ -97,6 +97,25 @@
   .tally__fill { height:100%; background:var(--accent); border-radius:3px; transition:width .3s ease; }
   .tally__n { font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
 
+  .freshness {
+    display:flex; align-items:center; gap:7px; align-self:flex-start;
+    background:none; border:none; padding:6px 2px; min-height:34px; cursor:pointer;
+    font-family:var(--f-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-3);
+  }
+  .freshness:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  .freshness__dot { width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none; }
+  .freshness[data-stale="1"] { color:var(--flag); }
+  .freshness[data-stale="1"] .freshness__dot { background:var(--flag); }
+  .freshness[data-stale="2"] { color:var(--critical); font-weight:700; }
+  .freshness[data-stale="2"] .freshness__dot { background:var(--critical); }
+
+  .schemaErr {
+    border:2px solid var(--critical); background:var(--critical-bg); color:var(--ink);
+    border-radius:11px; padding:15px; display:flex; flex-direction:column; gap:9px; font-size:15px;
+  }
+  .schemaErr b { color:var(--critical); }
+
   /* ---------- collapsible strips ---------- */
   .strip { border:1px solid var(--rule); border-radius:10px; background:var(--card); }
   .strip > summary {
@@ -347,7 +366,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "3c204a62db70"; /* @@VERSION@@ */
+  var APP_VERSION = "0b893fb20b7d"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -675,6 +694,24 @@
 
   function render(d, a, ageMin) {
     lastWeather = { analysed: a, ageMin: ageMin };
+
+    // If the published board is a shape this build can't read, say so loudly.
+    // Silently rendering nothing is what makes a stale app look like a broken
+    // pipeline — the board would sit there frozen while updates flowed past it.
+    if (!d || !Array.isArray(d.quests)) {
+      app.innerHTML = '<div class="schemaErr"><b>This app is out of date.</b>' +
+        "<div>Your board updated to a newer format than this copy understands, so it can't " +
+        "show it. Tap below to pull the current version — everything you've ticked off is kept.</div>" +
+        '<button class="btn" id="hardReload" type="button">Update now</button></div>';
+      app.hidden = false;
+      lock.hidden = true;
+      var hr = document.getElementById("hardReload");
+      if (hr) hr.addEventListener("click", function () {
+        location.replace(location.pathname + "?v=" + Date.now());
+      });
+      return;
+    }
+
     var quests = buildQuests(d).filter(function (q) { return !overlay.hidden[q.key]; });
 
     var allObjs = quests.reduce(function (n, q) { return n + questState(q).total; }, 0);
@@ -686,7 +723,11 @@
       "<h1>Evergreen <span>Dispatch</span></h1>" +
       '<div class="mast__date">' + esc(d.dateLabel) + "</div></div>" +
       '<div class="tally"><div class="tally__track"><div class="tally__fill" style="width:' + pct + '%"></div></div>' +
-      '<span class="tally__n">' + allDone + " / " + allObjs + " done</span></div></header>";
+      '<span class="tally__n">' + allDone + " / " + allObjs + " done</span></div>" +
+      // Freshness has to be visible. "It doesn't update" is impossible to debug
+      // when the board looks identical whether it's 20 seconds or 2 days old.
+      '<button class="freshness" id="freshness" type="button" title="Tap to check for updates now">' +
+      '<span class="freshness__dot" id="freshDot"></span><span id="freshText">checking…</span></button></header>';
 
     // Tabs. A tab with nothing left in it is dropped rather than sitting there
     // empty, except the one currently open.
@@ -836,6 +877,13 @@
   /* ============ interaction ============ */
 
   function wire(d) {
+    paintFreshness();
+    var fresh = document.getElementById("freshness");
+    if (fresh) fresh.addEventListener("click", function () {
+      toast("Checking…");
+      pullNow(true);
+    });
+
     app.querySelectorAll("[data-tab]").forEach(function (t) {
       t.addEventListener("click", function () {
         activeTab = t.dataset.tab;
@@ -1154,37 +1202,70 @@
     startRefresh();
   }
 
+  // How old the board on screen actually is.
+  function paintFreshness() {
+    var el = document.getElementById("freshness");
+    var txt = document.getElementById("freshText");
+    if (!el || !txt || !bundle || !bundle.built) return;
+    var mins = Math.max(0, Math.round((Date.now() - new Date(bundle.built).getTime()) / 60000));
+    txt.textContent = "board " + (
+      mins < 1 ? "just now" :
+      mins < 60 ? mins + "m ago" :
+      mins < 1440 ? Math.round(mins / 60) + "h ago" :
+      Math.round(mins / 1440) + "d old"
+    );
+    el.dataset.stale = mins > 1440 ? "2" : mins > 240 ? "1" : "0";
+  }
+
+  var pulling = false;
+  async function pullNow(manual) {
+    if (pulling || !currentPin) return;
+    if (!manual && document.body.dataset.edit === "1") return;   // don't yank mid-edit
+    pulling = true;
+    try {
+      await checkAppVersion();
+      var next = await fetchBundle();
+      wxTicks++;
+      if (next.built !== bundle.built) {
+        bundle = next;
+        stopSpeaking();
+        board = await decrypt(currentPin + ":" + deviceKey, bundle);
+        var w = await loadWeather();
+        var y = window.scrollY;
+        render(board, w ? analyseWeather(w.data) : null, w ? w.ageMin : 0);
+        window.scrollTo(0, y);
+        if (manual) toast("Updated");
+      } else if (wxTicks % 10 === 0) {
+        var w2 = await loadWeather();
+        var y2 = window.scrollY;
+        render(board, w2 ? analyseWeather(w2.data) : null, w2 ? w2.ageMin : 0);
+        window.scrollTo(0, y2);
+      } else {
+        paintFreshness();
+        if (manual) toast("Already up to date");
+      }
+    } catch (e) {
+      if (manual) toast("No signal — try again in a moment");
+    } finally { pulling = false; }
+  }
+
   function startRefresh() {
     if (startRefresh.timer) return;
-    startRefresh.timer = setInterval(async function () {
-      if (document.hidden || !currentPin || document.body.dataset.edit === "1") return;
-      await checkAppVersion();
-      try {
-        var next = await fetchBundle();
-        wxTicks++;
-        if (next.built !== bundle.built) {
-          bundle = next;
-          stopSpeaking();
-          board = await decrypt(currentPin + ":" + deviceKey, bundle);
-          var w = await loadWeather();
-          var y = window.scrollY;
-          render(board, w ? analyseWeather(w.data) : null, w ? w.ageMin : 0);
-          window.scrollTo(0, y);
-        } else if (wxTicks % 10 === 0) {
-          var w2 = await loadWeather();
-          var y2 = window.scrollY;
-          render(board, w2 ? analyseWeather(w2.data) : null, w2 ? w2.ageMin : 0);
-          window.scrollTo(0, y2);
-        }
-      } catch (e) { /* dead zone — try again next minute */ }
+    startRefresh.timer = setInterval(function () {
+      if (document.hidden) return;
+      paintFreshness();               // keep the age honest even between pulls
+      pullNow(false);
     }, REFRESH_MS);
   }
-  // Picking the phone back up is the likeliest moment to be running stale code.
+
+  // Picking the phone back up is the moment he most expects to see today's
+  // board. Pull immediately rather than waiting out the next interval.
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;
-    checkAppVersion();
-    if (currentPin) wxTicks = 9;
+    paintFreshness();
+    pullNow(false);
   });
+  window.addEventListener("focus", function () { paintFreshness(); pullNow(false); });
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
