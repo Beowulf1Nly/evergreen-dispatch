@@ -3,3 +3,7 @@
 private/
 *.local
 node_modules/
+
+# wrangler caches your account id and email here — never publish it
+worker/.wrangler/
+.wrangler/
