@@ -512,7 +512,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "94727f2c7e39"; /* @@VERSION@@ */
+  var APP_VERSION = "6092118b6902"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -621,6 +621,7 @@
   var syncUrl = null;
   var pendingDeletes = { done: [], hidden: [], titles: [], notes: [] };
   var syncBusy = false;
+  var syncStatus = "…";     // shown next to the board age so failures are visible
 
   async function loadSyncConfig() {
     try {
@@ -636,12 +637,17 @@
       Object.keys(remote[b] || {}).forEach(function (id) {
         if (overlay[b][id] !== remote[b][id]) { overlay[b][id] = remote[b][id]; changed = true; }
       });
-      // Anything the server doesn't have that we didn't just delete locally is
-      // something another device cleared — drop it.
+      // Only delete when the SERVER has actually recorded a deletion — it keeps
+      // a stamp for every key it has ever seen, so a stamp with no value is a
+      // real tombstone. Treating plain absence as a delete is data loss: a
+      // device whose work was never uploaded would wipe itself to match an
+      // empty server, which is exactly what nearly happened here.
+      var stamps = remote.stamps || {};
       Object.keys(overlay[b]).forEach(function (id) {
-        if (!(id in (remote[b] || {})) && pendingDeletes[b].indexOf(id) < 0) {
-          delete overlay[b][id]; changed = true;
-        }
+        if (id in (remote[b] || {})) return;
+        if (pendingDeletes[b].indexOf(id) >= 0) return;      // our own pending delete
+        if (!(b + ":" + id in stamps)) return;                // server never knew it — keep and push
+        delete overlay[b][id]; changed = true;
       });
     });
     if (remote.order && JSON.stringify(remote.order) !== JSON.stringify(overlay.order)) {
@@ -685,9 +691,18 @@
       var r = await fetch(syncUrl + "/state", {
         headers: { Authorization: "Bearer " + deviceKey }, cache: "no-store",
       });
-      if (!r.ok) return;
-      if (mergeRemote(await r.json())) { var y = window.scrollY; redraw(); window.scrollTo(0, y); }
-    } catch (e) { /* offline */ }
+      if (!r.ok) { syncStatus = "error " + r.status; return; }
+      var remote = await r.json();
+      syncStatus = "ok";
+      if (mergeRemote(remote)) { var y = window.scrollY; redraw(); window.scrollTo(0, y); }
+
+      // Seed the server with anything it has never seen. Without this, work
+      // done before sync existed just sits on one device forever.
+      var mineUnknown = ["done", "hidden", "titles", "notes"].some(function (b) {
+        return Object.keys(overlay[b]).some(function (id) { return !(id in (remote[b] || {})); });
+      });
+      if (mineUnknown) pushSync();
+    } catch (e) { syncStatus = "offline"; }
   }
 
   var prefs = load(PREFS_KEY, null) || { voice: "", showDone: false, tab: "Today" };
@@ -1859,6 +1874,7 @@
     var w = await loadWeather();
     render(board, w ? analyseWeather(w.data) : null, w ? w.ageMin : 0);
     startRefresh();
+    pullSync();     // reconcile with the other devices as soon as we're in
   }
 
   // How old the board on screen actually is.
@@ -1867,12 +1883,17 @@
     var txt = document.getElementById("freshText");
     if (!el || !txt || !bundle || !bundle.built) return;
     var mins = Math.max(0, Math.round((Date.now() - new Date(bundle.built).getTime()) / 60000));
+    var sync = !syncUrl ? "no sync"
+      : syncStatus === "ok" ? "synced"
+      : syncStatus === "offline" ? "sync offline"
+      : syncStatus === "…" ? "sync…"
+      : "SYNC " + syncStatus.toUpperCase();
     txt.textContent = "board " + (
       mins < 1 ? "just now" :
       mins < 60 ? mins + "m ago" :
       mins < 1440 ? Math.round(mins / 60) + "h ago" :
       Math.round(mins / 1440) + "d old"
-    );
+    ) + " · " + sync;
     el.dataset.stale = mins > 1440 ? "2" : mins > 240 ? "1" : "0";
   }
 
