@@ -231,8 +231,14 @@ async function main() {
   }
 
   await writeFile(OUT, audio);
+  // Stamp WHICH board this audio describes. The app refuses to play a clip that
+  // doesn't match the board on screen — out of quota, the old file used to keep
+  // playing, so a Monday brief was still being read out on Thursday.
   await writeFile(META, JSON.stringify({
-    provider, chars: text.length, built: new Date().toISOString(),
+    provider,
+    chars: text.length,
+    built: new Date().toISOString(),
+    dateLabel: board.dateLabel || null,
   }, null, 2) + "\n", "utf8");
 
   ledger = {

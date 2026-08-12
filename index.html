@@ -512,7 +512,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "6092118b6902"; /* @@VERSION@@ */
+  var APP_VERSION = "3a50417e762a"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -1817,6 +1817,14 @@
         var meta = await fetch("brief.json?t=" + Date.now(), { cache: "no-store" });
         if (meta.ok) {
           var mj = await meta.json();
+          // Only play the rendered clip if it describes THIS board. When the TTS
+          // quota runs out the old file survives, and a confident voice reading
+          // a two-day-old day is worse than the plain one reading today's.
+          // Unstamped audio counts as stale too — if we can't prove which board
+          // it describes, we can't trust it to be today's.
+          if (mj.dateLabel !== d.dateLabel) {
+            throw new Error("stale audio");
+          }
           audio = new Audio("brief.mp3?v=" + encodeURIComponent(mj.built));
           audio.onended = afterHeadline;
           audio.onerror = function () { speakSequence(briefText(d) + " " + tail, reset); };
