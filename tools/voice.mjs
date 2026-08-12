@@ -185,8 +185,12 @@ async function main() {
   // characters and the ElevenLabs free tier is 10,000 a MONTH. Rendering on
   // every publish would exhaust it in a single day. So: only re-render when the
   // words actually changed, and never more than BUDGET_PER_DAY times daily.
-  const BUDGET_PER_DAY = 6;        // generous — the real ceiling is monthly
-  const MONTHLY_CHARS = 9200;      // headroom under the 10,000 free tier
+  // Budget follows the provider's actual free allowance. ElevenLabs is the tight
+  // one at 10k/month; Azure's F0 tier gives 500k, which is ~75x what a day costs,
+  // so the whole walkthrough can be rendered instead of just the headline.
+  const BUDGETS = { elevenlabs: 9200, azure: 450000, openai: 200000 };
+  const MONTHLY_CHARS = BUDGETS[provider] || 9200;
+  const BUDGET_PER_DAY = provider === "elevenlabs" ? 6 : 40;
   const LEDGER = join(ROOT, "private", ".voice-ledger.json");
   const scriptHash = createHash("sha256").update(text).digest("hex").slice(0, 16);
   const now = new Date();
