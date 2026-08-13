@@ -196,6 +196,15 @@
   .walk__exit { background:none; border:none; color:var(--ink-3); font-size:20px; line-height:1; cursor:pointer; padding:6px 2px; min-width:34px; min-height:34px; }
   .walk__exit:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
+  .walk__hint {
+    position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    font-family:var(--f-mono); font-size:13px; font-weight:800; letter-spacing:.2em;
+    padding:6px 14px; border-radius:999px; pointer-events:none; z-index:2;
+    opacity:0; transition:opacity .12s ease;
+  }
+  .walk__hint[data-dir="r"] { opacity:1; color:#fff; background:var(--accent); }
+  .walk__hint[data-dir="l"] { opacity:1; color:var(--ink); background:var(--rule); }
+  .walk__body { touch-action:pan-y; will-change:transform; }
   .walk__body { flex:1; display:flex; flex-direction:column; justify-content:center; gap:9px; min-height:0; overflow-y:auto; padding:18px 0; }
   .walk__where { font-family:var(--f-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.13em; color:var(--flag); }
   .walk__giver { font-family:var(--f-mono); font-size:12px; text-transform:uppercase; letter-spacing:.11em; color:var(--accent); font-weight:700; }
@@ -485,6 +494,7 @@
     <span class="walk__count" id="walkCount"></span>
     <button class="walk__exit" id="walkExit" type="button" aria-label="Leave the rundown">✕</button>
   </div>
+  <div class="walk__hint" id="walkHint"></div>
   <div class="walk__body">
     <div class="walk__where" id="walkWhere"></div>
     <div class="walk__giver" id="walkGiver"></div>
@@ -498,7 +508,7 @@
     <button class="btn" type="submit">Save note</button>
   </form>
   <div class="walk__actions">
-    <button class="wact wact--skip" id="wSkip" type="button">Skip</button>
+    <button class="wact wact--skip" id="wSkip" type="button">Skip for now</button>
     <button class="wact wact--upd" id="wUpd" type="button">Update</button>
     <button class="wact wact--done" id="wDone" type="button">Done</button>
   </div>
@@ -512,7 +522,7 @@
   // with max-age=600 and a home-screen icon can hold it far longer than that,
   // so the app has to notice it's stale and replace itself — refreshing the
   // board data alone leaves old code running against new data.
-  var APP_VERSION = "3a50417e762a"; /* @@VERSION@@ */
+  var APP_VERSION = "7463873f2bcd"; /* @@VERSION@@ */
 
   var PASS_KEY = "evergreen-pass";
   var DEVKEY_KEY = "evergreen-devicekey";
@@ -1646,21 +1656,11 @@
     document.getElementById("walkFill").style.width = Math.round((walk.i / walk.queue.length) * 100) + "%";
     document.getElementById("walkUpdate").hidden = true;
 
+    // Silent by design. This is a thumb-driven triage pass, not a briefing —
+    // he reads it, swipes, moves on. Audio only made it slower.
     stopSpeaking();
-    var line = (intro ? "Right. " + walk.queue.length + " to get through. " : "") +
-      it.q.giver + ". " + objTitle(it.o) + "." + (it.o.note ? " " + it.o.note : "");
-
-    // Play the rendered clip for this line if one exists; otherwise the browser
-    // voice reads it. Clips only exist for lines that fit the month's budget.
-    var hash = clipIndex && clipIndex[it.o.id];
-    if (hash && !overlay.titles[it.o.id]) {
-      if (walkAudio) { walkAudio.pause(); walkAudio = null; }
-      walkAudio = new Audio("voice/" + hash + ".mp3");
-      walkAudio.onerror = function () { walkAudio = null; speakSequence(line); };
-      walkAudio.play().catch(function () { walkAudio = null; speakSequence(line); });
-      return;
-    }
-    speakSequence(line);
+    var card = document.querySelector(".walk__body");
+    if (card) { card.style.transition = "none"; card.style.transform = ""; card.style.opacity = "1"; }
   }
 
   function walkNext() {
@@ -1678,8 +1678,7 @@
     redraw();
     window.scrollTo(0, y);
     if (finished) {
-      speakSequence("That's everything. Nice work.");
-      toast("Rundown finished");
+            toast("Rundown finished");
     }
   }
 
@@ -1703,6 +1702,58 @@
     wireWalk.done = true;
 
     document.getElementById("walkExit").addEventListener("click", function () { walkEnd(false); });
+
+    // Swipe: right clears it, left skips. The card follows your thumb so you can
+    // see which way it's going before you commit, and snaps back under threshold.
+    (function () {
+      var card = document.querySelector(".walk__body");
+      var hint = document.getElementById("walkHint");
+      if (!card) return;
+      var x0 = null, dx = 0, dragging = false;
+      var THRESHOLD = 90;
+
+      function setHint(d) {
+        if (!hint) return;
+        hint.textContent = d > 40 ? "DONE" : d < -40 ? "SKIP" : "";
+        hint.dataset.dir = d > 40 ? "r" : d < -40 ? "l" : "";
+      }
+      function reset(animate) {
+        card.style.transition = animate ? "transform .18s ease, opacity .18s ease" : "none";
+        card.style.transform = ""; card.style.opacity = "1";
+        setHint(0); dx = 0; dragging = false;
+      }
+      function fling(dir, then) {
+        card.style.transition = "transform .18s ease, opacity .18s ease";
+        card.style.transform = "translateX(" + (dir * 520) + "px) rotate(" + (dir * 14) + "deg)";
+        card.style.opacity = "0";
+        setTimeout(function () { reset(false); then(); }, 170);
+      }
+
+      card.addEventListener("touchstart", function (e) {
+        if (!document.getElementById("walkUpdate").hidden) return;   // editing a note
+        x0 = e.touches[0].clientX; dragging = true;
+        card.style.transition = "none";
+      }, { passive: true });
+
+      card.addEventListener("touchmove", function (e) {
+        if (!dragging || x0 === null) return;
+        dx = e.touches[0].clientX - x0;
+        card.style.transform = "translateX(" + dx + "px) rotate(" + (dx / 22) + "deg)";
+        card.style.opacity = String(Math.max(0.45, 1 - Math.abs(dx) / 420));
+        setHint(dx);
+      }, { passive: true });
+
+      card.addEventListener("touchend", function () {
+        if (!dragging) return;
+        var d = dx;
+        if (d > THRESHOLD) { fling(1, function () { document.getElementById("wDone").click(); }); }
+        else if (d < -THRESHOLD) { fling(-1, function () { walkNext(); }); }
+        else { reset(true); }
+        x0 = null;
+      });
+
+      walkEnd.resetCard = reset;
+    })();
 
     document.getElementById("wSkip").addEventListener("click", function () { walkNext(); });
 
