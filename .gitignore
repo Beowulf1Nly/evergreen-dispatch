@@ -7,3 +7,8 @@ node_modules/
 # wrangler caches your account id and email here — never publish it
 worker/.wrangler/
 .wrangler/
+
+# stray HQ exports — plaintext customer data, never publish
+lawn.txt
+clean.txt
+*.export.txt
