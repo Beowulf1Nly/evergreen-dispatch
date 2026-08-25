@@ -94,6 +94,7 @@
   "jasmine-row": "cf4b756c15fd",
   "riggs-row": "c3eec4e00b1c",
   "jasmine-call": "0fd4ba83a7bc",
+  "lead-gotch": "5ec7cf5d6cc0",
   "lead-styles": "b55676efd6a4",
   "lead-natasha-dunnellon": "36fc53b7f661",
   "lead-natasha-academy": "336c9c6a4b44",
@@ -216,9 +217,10 @@
   "mon-newleads": "f0a8d5d2479c",
   "mon-remaining": "2747bcd45dbf",
   "mon-krewson": "fe6521fcaa8f",
-  "tue-noroute": "58204ad71f8b",
-  "tue-pushed": "9d6c81f828c4",
-  "tue-booked": "7a08dfe6d03c",
-  "tue-lemen": "edd43c250166",
-  "tue-karas": "2380231883d3"
+  "tue-gotch": "6425ce6c13ec",
+  "tue-noroute": "69914897c1f4",
+  "tue-pushed": "0c79bed99ac2",
+  "tue-booked": "e5b5e23cdf95",
+  "tue-lemen": "50bd24c51e20",
+  "tue-karas": "013bf4297094"
 }
